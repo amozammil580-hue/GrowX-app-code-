@@ -1,0 +1,3441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrowX</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --bg:#0A0A0F; --card:#12121A; --accent:#00FF88; --accent2:#00D9FF;
+    --text:#E0E0E0; --muted:#6A6A80; --danger:#FF2E63; --warning:#FFD700;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:radial-gradient(circle at 20% 20%, #1a1a2e 0%, var(--bg) 50%);color:var(--text);font-family:'Inter', sans-serif;padding-bottom:90px;-webkit-tap-highlight-color:transparent}
+  
+  button, input, select, textarea, [onclick], [data-copy-link], [data-copy-upi] {
+    -webkit-tap-highlight-color:transparent !important;
+    outline:none;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  
+  button:focus, input:focus, select:focus, textarea:focus {
+    outline:none;
+  }
+
+  /* AD PANEL */
+  .ad-panel{
+    position:fixed;top:60px;left:50%;transform:translateX(-50%);
+    width:min(300px,92vw);background:rgba(18,18,26,0.95);
+    border:2px solid var(--accent);border-radius:12px;
+    padding:12px;z-index:500;backdrop-filter:blur(10px);
+    box-shadow:0 0 30px rgba(0,255,136,0.3);
+    display:none;animation:slideDown 0.4s ease-out;
+  }
+
+  .ad-panel.show{
+    display:block;
+  }
+
+  @keyframes slideDown{
+    from{top:-200px;opacity:0}to{top:60px;opacity:1}
+  }
+
+  .ad-close-btn{
+    position:absolute;top:8px;right:8px;
+    background:rgba(255,46,99,0.2);border:none;
+    color:var(--danger);font-size:20px;cursor:pointer;
+    width:28px;height:28px;display:flex;align-items:center;
+    justify-content:center;border-radius:50%;
+    display:none;transition:0.3s;
+  }
+
+  .ad-close-btn.show{
+    display:flex;
+  }
+
+  .ad-close-btn:hover{
+    background:rgba(255,46,99,0.4);transform:scale(1.1);
+  }
+
+  .ad-video{
+    width:100%;
+    aspect-ratio:9/16;
+    background:rgba(0,0,0,0.3);
+    border-radius:8px;overflow:hidden;margin-bottom:8px;
+  }
+
+  .ad-video video{
+    width:100%;height:100%;object-fit:cover;
+  }
+
+  .ad-timer{
+    text-align:center;color:var(--accent2);font-family:'Orbitron';
+    font-weight:700;font-size:14px;
+  }
+
+  body.ad-blur-active > *:not(#adPanel){
+    filter:blur(10px);
+    transition:filter 0.3s ease;
+    pointer-events:none;
+  }
+  body.ad-blur-active::before{
+    content:"";
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.35);
+    z-index:400;
+    pointer-events:none;
+  }
+
+  .loading-screen{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(circle at 20% 20%, #1a1a2e 0%, var(--bg) 50%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:9999;
+    gap:30px;
+  }
+
+  .loading-logo{
+    font-family:'Orbitron';font-size:48px;font-weight:700;
+    color:var(--accent);text-shadow:0 0 20px var(--accent);
+    animation:glow 2s ease-in-out infinite;
+  }
+
+  @keyframes glow{
+    0%,100%{text-shadow:0 0 20px var(--accent), 0 0 10px var(--accent2);}
+    50%{text-shadow:0 0 40px var(--accent), 0 0 20px var(--accent2), 0 0 60px var(--accent);}
+  }
+
+  .progress-container{
+    width:250px;height:6px;
+    background:rgba(0,255,136,0.1);border-radius:10px;
+    overflow:hidden;border:1px solid rgba(0,255,136,0.3);
+  }
+
+  .progress-bar{
+    height:100%;background:linear-gradient(90deg, var(--accent), var(--accent2));
+    width:0%;border-radius:10px;transition:width 0.1s linear;
+    box-shadow:0 0 15px rgba(0,255,136,0.5);
+  }
+
+  .loading-text{
+    color:var(--muted);font-size:12px;font-family:'Orbitron';
+    letter-spacing:2px;
+  }
+
+  .internet-warning{
+    position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);
+    background:rgba(255,215,0,0.95);color:#000;padding:30px 40px;
+    border-radius:12px;font-weight:700;font-size:16px;
+    box-shadow:0 0 50px rgba(255,215,0,0.5);z-index:9998;
+    text-align:center;display:none;
+    animation:slideUp 0.3s ease-out;
+  }
+
+  .signup-screen{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:radial-gradient(circle at 20% 20%, #1a1a2e 0%, var(--bg) 50%);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    z-index:9998;
+    padding:20px;
+    gap:20px;
+    overflow-y:auto;
+  }
+
+  .signup-screen.show{
+    display:flex;
+  }
+
+  .signup-container{
+    text-align:center;max-width:420px;width:100%;
+  }
+
+  .signup-title{
+    font-family:'Orbitron';font-size:42px;font-weight:700;
+    color:var(--accent);text-shadow:0 0 20px var(--accent);
+    margin-bottom:8px;
+  }
+
+  .signup-subtitle{
+    color:var(--muted);font-size:13px;line-height:1.5;
+    margin-bottom:30px;
+  }
+
+  .signup-form{
+    background:rgba(18,18,26,0.8);border:1px solid rgba(0,255,136,0.2);
+    border-radius:16px;padding:28px;backdrop-filter:blur(10px);
+  }
+
+  .signup-input-group{
+    margin-bottom:16px;text-align:left;
+  }
+
+  .signup-label{
+    display:block;color:var(--accent);font-size:12px;font-weight:700;
+    margin-bottom:8px;letter-spacing:0.5px;font-family:'Orbitron';
+  }
+
+  .signup-input{
+    width:100%;padding:14px 16px;border:1.5px solid rgba(0,255,136,0.2);
+    background:rgba(0,0,0,0.4);border-radius:10px;color:var(--text);
+    font-size:14px;transition:all 0.3s;
+  }
+
+  .signup-input:focus{
+    border-color:var(--accent);box-shadow:0 0 12px rgba(0,255,136,0.15);
+    background:rgba(0,0,0,0.5);
+  }
+
+  .signup-hint{
+    display:block;color:var(--muted);font-size:11px;margin-top:6px;
+    line-height:1.4;
+  }
+
+  .signup-btn{
+    width:100%;background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#000;border:none;padding:14px 20px;border-radius:10px;
+    cursor:pointer;font-weight:700;font-size:16px;font-family:'Orbitron';
+    box-shadow:0 0 20px rgba(0,255,136,0.3);transition:all 0.3s;
+    margin-top:20px;
+  }
+
+  .signup-btn:hover{
+    box-shadow:0 0 30px rgba(0,255,136,0.5);transform:translateY(-2px);
+  }
+
+  .signup-btn:disabled{
+    background:#333;color:#777;box-shadow:none;cursor:not-allowed;
+  }
+
+  .signup-error{
+    color:var(--danger);font-size:13px;margin-top:15px;padding:10px;
+    background:rgba(255,46,99,0.1);border-left:3px solid var(--danger);
+    border-radius:6px;text-align:left;
+  }
+
+  .signup-success{
+    color:var(--accent);font-size:13px;margin-top:15px;padding:10px;
+    background:rgba(0,255,136,0.1);border-left:3px solid var(--accent);
+    border-radius:6px;text-align:left;
+  }
+
+  .banned-telegram-link{
+    display:inline-block;background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#000;padding:14px 28px;border-radius:10px;margin-top:20px;
+    text-decoration:none;font-weight:700;font-size:14px;
+    box-shadow:0 0 20px rgba(0,255,136,0.3);transition:all 0.3s;
+    cursor:pointer;border:none;
+  }
+
+  .banned-telegram-link:hover{
+    transform:translateY(-2px);box-shadow:0 0 30px rgba(0,255,136,0.5);
+  }
+
+  .header{background:rgba(18,18,26,0.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,255,136,0.2);padding:18px;text-align:center;font-size:22px;font-weight:700;font-family:'Orbitron';color:var(--accent);text-shadow:0 0 10px var(--accent);position:fixed;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center}
+
+  .header-left{
+    flex:1;
+    text-align:left;
+    font-size:20px;
+    font-weight:800;
+    user-select:none;
+  }
+
+  .header-right{display:flex;gap:12px;align-items:center}
+
+  .notification-btn{background:transparent;border:none;color:var(--accent);font-size:20px;cursor:pointer;transition:0.3s;position:relative}
+  .notification-btn:hover{transform:scale(1.1)}
+  .notification-badge{position:absolute;top:-5px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+  .nav{display:flex;justify-content:space-around;background:rgba(18,18,26,0.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,217,255,0.1);padding:8px;position:fixed;left:0;right:0;z-index:19}
+  .nav button{background:transparent;border:none;color:var(--muted);padding:10px 5px;font-size:13px;font-weight:500;cursor:pointer;width:25%;border-radius:8px;transition:0.3s}
+  .nav button.active{color:var(--accent);background:rgba(0,255,136,0.1);box-shadow:0 0 15px rgba(0,255,136,0.2);font-weight:600}
+  .page{display:none;padding:20px;padding-bottom:20px}.page.active{display:block;animation:fade 0.3s}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  .card{background:rgba(18,18,26,0.7);backdrop-filter:blur(10px);padding:20px;border-radius:16px;margin-bottom:20px;border:1px solid rgba(0,255,136,0.15)}
+  input,textarea,select{width:100%;padding:14px;margin:10px 0;border-radius:10px;border:1px solid rgba(0,217,255,0.2);background:rgba(42,42,58,0.5);color:var(--text);font-size:14px}
+  button.primary{background:linear-gradient(90deg, var(--accent), var(--accent2));color:#000;border:none;padding:16px 20px;border-radius:12px;cursor:pointer;width:100%;font-weight:700;font-size:16px;font-family:'Orbitron';box-shadow:0 0 20px rgba(0,255,136,0.3);transition:all 0.3s}
+  button.primary:hover{transform:translateY(-2px);box-shadow:0 0 30px rgba(0,255,136,0.5)}
+  button.primary:disabled{background:#333;color:#777;box-shadow:none;cursor:not-allowed}
+  button.secondary{background:rgba(42,42,58,0.8);color:var(--text);border:1px solid rgba(0,217,255,0.2);padding:12px 15px;border-radius:10px;cursor:pointer;width:100%;margin-top:10px;transition:all 0.3s}
+  button.secondary:hover{border-color:var(--accent2);box-shadow:0 0 15px rgba(0,217,255,0.2)}
+
+  .video-cover{position:relative;width:100%;padding-bottom:56.25%;overflow:hidden;border-radius:14px;margin:12px 0;border:1px solid rgba(0,255,136,0.2);background:rgba(0,0,0,0.5);height:0}
+  .video-cover img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
+  .video-cover-placeholder {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    width: 100% !important;
+    height: 140px !important;
+    position: relative !important;
+  }
+  .points{
+    color:var(--accent);
+    font-weight:700;
+    font-family:'Orbitron';
+    font-size:14px;
+    border:1.5px solid #00FF88;
+    padding:9px 13px;
+    border-radius:6px;
+    display:inline-block;
+  }
+  .video-top-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+  .uploader-info{display:flex;align-items:center;gap:10px}
+  .uploader-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg, var(--accent), var(--accent2));color:#000;font-weight:800;font-family:'Orbitron';display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 10px rgba(0,255,136,0.3)}
+  .uploader-details{display:flex;flex-direction:column}
+  .uploader-name-box{display:flex;align-items:center;gap:6px}
+  .uploader-name{font-weight:700;font-size:14px;color:var(--text)}
+
+  .video-right-badges{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge-pill{padding:5px 14px;border-radius:50px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;letter-spacing:0.2px}
+
+  .badge-free {background: gray; color: white; font-weight: 700; padding: 5px 16px; border-radius: 50px;}
+  .badge-daily {background: orange; color: white; font-weight: 700; padding: 5px 16px; border-radius: 50px;}
+  .badge-pro {background: purple; color: white; font-weight: 700; padding: 5px 16px; border-radius: 50px;}
+  .badge-vip {background: linear-gradient(90deg, #FFD700, #FF9500); color: #000000; font-weight: 900; padding: 5px 16px; border-radius: 50px; box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);}
+
+  .category-badge{background:rgba(0, 217, 255, 0.12);color:#00D9FF;border:1.5px solid rgba(0, 217, 255, 0.4)}
+  .xp-badge{background:rgba(0, 255, 136, 0.1);color:#00FF88;border:1.5px solid rgba(0, 255, 136, 0.5);font-weight:700}
+  .priority-badge{background:rgba(255,215,0,0.15);color:#FFD700;border:1.5px solid rgba(255,215,0,0.6);font-weight:700}
+
+  .progress-info{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--text)}
+  .progress-left-text{color:var(--accent2)}
+  .progress-bar-bg{width:100%;height:8px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;position:relative}
+  .progress-bar-fill{height:100%;background:linear-gradient(90deg, var(--accent2), var(--accent));border-radius:10px;transition:width 0.4s ease}
+  .completed-badge{background:var(--danger);color:#fff;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700}
+
+  .category-filter{display:flex;gap:8px;overflow-x:auto;padding:10px 0;margin-bottom:10px;scroll-behavior:smooth}
+  .category-filter::-webkit-scrollbar{height:4px}
+  .category-filter::-webkit-scrollbar-thumb{background:var(--accent);border-radius:2px}
+  .cat-btn{background:rgba(42,42,58,0.8);border:1px solid rgba(0,217,255,0.2);color:var(--muted);padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap;transition:0.3s;min-width:max-content}
+  .cat-btn.active{background:linear-gradient(90deg, var(--accent), var(--accent2));color:#000;border:2px solid var(--accent);box-shadow:0 0 15px rgba(0,255,136,0.3)}
+
+  .plan-filter{display:flex;gap:8px;overflow-x:auto;padding:0 0 10px 0;margin-bottom:15px;scroll-behavior:smooth}
+  .plan-filter::-webkit-scrollbar{height:4px}
+  .plan-filter::-webkit-scrollbar-thumb{background:var(--accent2);border-radius:2px}
+  .plan-tab-btn{background:rgba(42,42,58,0.4);border:1px solid rgba(255,215,0,0.2);color:var(--muted);padding:8px 16px;border-radius:20px;cursor:pointer;font-weight:700;font-size:12px;white-space:nowrap;transition:0.3s;min-width:max-content;font-family:'Orbitron'}
+  .plan-tab-btn.active{background:linear-gradient(90deg, #FFD700, #FF9500);color:#000;border:2px solid #FFD700;box-shadow:0 0 15px rgba(255,215,0,0.3)}
+
+  .video-details-section{margin-top:12px}
+  .video-title-text{margin:0 0 4px 0;color:var(--text);font-size:17px;font-weight:700;line-height:1.3}
+
+  .feedback-section{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+  .empty-feed-msg{text-align:center;padding:40px 20px;color:var(--muted);font-size:16px;font-family:'Orbitron';background:rgba(18,18,26,0.5);border-radius:16px;border:1px dashed rgba(0,217,255,0.3)}
+
+  .priority-card{border:2px solid #FFD700 !important;box-shadow:0 0 25px rgba(255,215,0,0.25) !important}
+
+  .plan-selector{background:rgba(18,18,26,0.9);border:1px solid rgba(0,255,136,0.2);border-radius:16px;padding:0;overflow:hidden}
+  .plan-selector h2{font-family:'Orbitron';font-size:28px;text-align:center;margin:20px 0 10px 0;color:var(--text)}
+  .plan-tabs{display:flex;justify-content:center;gap:8px;background:rgba(0,0,0,0.3);padding:10px 20px;margin:20px}
+  .tab-btn{background:rgba(42,42,58,0.6);border:1px solid rgba(0,217,255,0.2);color:var(--muted);padding:12px 24px;border-radius:10px;cursor:pointer;font-weight:600;font-size:14px;transition:all 0.3s ease;font-family:'Orbitron';flex:1}
+  .tab-btn.active{background:linear-gradient(90deg, var(--accent), var(--accent2)) !important;color:#000 !important;border:2px solid var(--accent) !important;box-shadow:0 0 15px rgba(0,255,136,0.3) !important}
+  .plans-scroll{display:flex;overflow-x:auto;scroll-behavior:smooth;gap:20px;padding:0 20px 30px 20px;scroll-snap-type:x mandatory}
+  .plans-scroll::-webkit-scrollbar{height:6px}
+  .plans-scroll::-webkit-scrollbar-thumb{background:var(--accent);border-radius:3px}
+  .plan-card{background:rgba(42,42,58,0.7);border:1px solid rgba(0,217,255,0.2);border-radius:16px;padding:24px;min-width:100%;flex-shrink:0;scroll-snap-align:start;opacity:0.5;transition:all 0.4s cubic-bezier(0.25,0.46,0.45,0.94);transform:scale(0.95)}
+  .plan-card.active-card{opacity:1;border:2px solid var(--accent);box-shadow:0 0 25px rgba(0,255,136,0.2);transform:scale(1)}
+  .plan-header{text-align:center;margin-bottom:20px}
+  .plan-title{font-family:'Orbitron';font-size:28px;font-weight:700;color:var(--accent);margin-bottom:4px}
+  .plan-tagline{font-size:14px;color:var(--muted);font-weight:500}
+  .plan-pricing{display:flex;gap:12px;margin:20px 0;justify-content:center;flex-wrap:wrap}
+  .price-box{background:rgba(0,0,0,0.3);border:1px solid rgba(0,217,255,0.2);border-radius:14px;padding:16px;min-width:140px;text-align:center;transition:0.3s}
+  .price-box.selected{border:2px solid var(--accent);background:rgba(0,255,136,0.08);box-shadow:0 0 15px rgba(0,255,136,0.15)}
+  .price-circle{font-size:24px;color:var(--accent);margin-bottom:8px;font-weight:700}
+  .price-amount{font-size:24px;font-weight:700;color:var(--text);margin:8px 0}
+  .price-sub{font-size:12px;color:var(--muted);line-height:1.4}
+  .plan-features{background:rgba(0,0,0,0.2);border-top:1px solid rgba(0,217,255,0.1);padding-top:16px;margin-top:16px}
+  .plan-features p{margin:8px 0;font-size:14px;color:var(--text)}
+  .plan-features b{color:var(--accent);font-weight:700}
+
+  /* DAILY PLAN PRICING GRID */
+  .daily-pricing-grid{
+    display:grid;grid-template-columns:repeat(2,1fr);gap:12px;
+    margin:16px 0;width:100%;
+  }
+  
+  .daily-price-option{
+    background:rgba(42,42,58,0.6);border:2px solid rgba(0,217,255,0.2);
+    border-radius:12px;padding:14px;text-align:center;cursor:pointer;
+    transition:all 0.3s ease;min-height:110px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:6px;
+  }
+  
+  .daily-price-option:hover{
+    border-color:var(--accent2);box-shadow:0 0 12px rgba(0,217,255,0.2);
+    transform:translateY(-2px);
+  }
+  
+  .daily-price-option.selected{
+    border:2px solid var(--accent);background:rgba(0,255,136,0.12);
+    box-shadow:0 0 18px rgba(0,255,136,0.25);
+  }
+  
+  .daily-tier-label{
+    font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;
+    letter-spacing:0.5px;
+  }
+  
+  .daily-tier-price{
+    font-size:22px;font-weight:700;color:var(--accent);font-family:'Orbitron';
+  }
+  
+  .daily-tier-sub{
+    font-size:10px;color:var(--muted);line-height:1.3;
+  }
+
+  .chat-box{height:300px;overflow-y:auto;background:rgba(0,0,0,0.3);padding:10px;border-radius:10px;margin-bottom:10px}
+  .msg{padding:8px 12px;border-radius:12px;margin:6px 0;max-width:80%}
+  .msg.user{background:rgba(0,255,136,0.2);margin-left:auto}
+  .msg.ai{background:rgba(18,18,26,0.9);border:1px solid rgba(0,217,255,0.2)}
+  h3{margin-bottom:12px;font-family:'Orbitron';font-size:18px}
+
+  .profile-page{max-width:700px;margin:auto}
+  .profile-card{background:rgba(18,18,26,.78);border:1px solid rgba(0,255,136,.18);border-radius:18px;padding:20px;margin-bottom:15px;backdrop-filter:blur(12px)}
+  .profile-top{display:flex;align-items:center;gap:15px;margin-bottom:15px}
+  .profile-avatar{width:75px;height:75px;min-width:75px;border-radius:50%;background:linear-gradient(135deg,#00FF88,#00D9FF);display:flex;align-items:center;justify-content:center;color:#000;font-family:'Orbitron';font-size:25px;font-weight:800;box-shadow:0 0 25px rgba(0,255,136,.4)}
+  .profile-name{font-family:'Orbitron';font-size:20px;font-weight:700;color:#E0E0E0;margin-bottom:2px}
+  .profile-username{color:#77778A;font-size:12px;margin-bottom:6px}
+  .profile-badge{display:inline-block;background:#2a2a3a;color:#E0E0E0;padding:4px 10px;border-radius:20px;font-size:10px;font-weight:700}
+  .profile-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .profile-stat{background:rgba(0,0,0,.30);border:1px solid rgba(0,217,255,.12);border-radius:12px;padding:14px 5px;text-align:center}
+  .profile-stat b{display:block;color:#00FF88;font-family:'Orbitron';font-size:20px;margin-bottom:2px}
+  .profile-stat span{color:#77778A;font-size:11px}
+  .profile-title{font-family:'Orbitron';font-size:16px;color:#00FF88;margin-bottom:12px}
+  .profile-info{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:14px}
+  .profile-info:last-child{border-bottom:0}
+  .profile-info span{color:#77778A}
+  .profile-info b{color:#E0E0E0;font-weight:600}
+  .profile-info b.free{color:#FF2E63}
+  .profile-info b.active{color:#00FF88}
+  .profile-reset{width:100%;border:0;padding:16px;border-radius:12px;margin-top:10px;background:linear-gradient(90deg,#00FF88,#00D9FF);color:#000;font-weight:800;font-family:'Orbitron';cursor:pointer;font-size:15px;box-shadow:0 0 20px rgba(0,255,136,.3);transition:all 0.3s}
+  .profile-reset:active{transform:scale(0.98)}
+
+  .edit-name-modal{
+    position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);
+    background:rgba(18,18,26,0.95);border:2px solid var(--accent);padding:30px;
+    border-radius:14px;text-align:center;z-index:9999;display:none;
+    backdrop-filter:blur(10px);box-shadow:0 0 50px rgba(0,255,136,0.3);
+    max-width:400px;width:90%;
+  }
+
+  .edit-name-modal.show{
+    display:block;
+    animation:slideUp 0.3s ease-out;
+  }
+
+  .edit-name-title{
+    font-family:'Orbitron';font-size:24px;font-weight:700;
+    color:var(--accent);margin-bottom:12px;
+  }
+
+  .edit-name-label{
+    color:var(--muted);font-size:13px;margin-bottom:15px;display:block;
+  }
+
+  .edit-name-input{
+    width:100%;padding:12px 14px;border:1.5px solid rgba(0,255,136,0.3);
+    background:rgba(0,0,0,0.3);color:var(--text);border-radius:10px;
+    font-size:14px;margin-bottom:15px;
+  }
+
+  .edit-name-cost{
+    background:rgba(255,215,0,0.1);border:1px solid rgba(255,215,0,0.3);
+    border-radius:8px;padding:12px;margin-bottom:15px;color:#FFD700;
+    font-weight:700;font-size:14px;
+  }
+
+  .edit-name-buttons{
+    display:flex;gap:10px;
+  }
+
+  .edit-name-btn{
+    flex:1;padding:12px;border:none;border-radius:8px;cursor:pointer;
+    font-weight:700;font-family:'Orbitron';transition:0.3s;
+  }
+
+  .edit-name-btn.confirm{
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#000;
+  }
+
+  .edit-name-btn.cancel{
+    background:rgba(42,42,58,0.8);color:var(--text);
+    border:1px solid rgba(0,217,255,0.2);
+  }
+
+  .payment-header{background:linear-gradient(135deg, rgba(0,255,136,0.15), rgba(0,217,255,0.15));border:2px solid var(--accent);border-radius:14px;padding:20px;margin-bottom:20px;text-align:center}
+  .payment-amount{font-size:48px;font-weight:900;color:var(--accent);font-family:'Orbitron';margin-bottom:10px}
+  .payment-plan{font-size:18px;font-weight:700;color:var(--text);margin-bottom:5px}
+  .payment-validity{font-size:13px;color:var(--muted)}
+
+  .payment-steps{background:rgba(0,255,136,0.05);border-left:4px solid var(--accent);border-radius:10px;padding:16px;margin-bottom:20px}
+  .payment-steps h4{color:var(--accent);margin-bottom:12px;font-family:'Orbitron'}
+  .payment-step{display:flex;gap:12px;margin-bottom:10px;font-size:14px}
+  .payment-step-num{min-width:24px;height:24px;background:var(--accent);color:#000;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+  .payment-step-text{color:var(--text);line-height:1.5}
+
+  .payment-box{background:rgba(18,18,26,0.8);border:2px solid rgba(0,255,136,0.2);border-radius:14px;padding:18px;margin-bottom:20px}
+  .payment-label{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:10px;display:block}
+  .upi-display{background:rgba(0,255,136,0.1);border:2px solid var(--accent);border-radius:12px;padding:16px;text-align:center;margin-bottom:10px}
+  .upi-text{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .upi-id{font-size:28px;font-weight:900;color:var(--accent);font-family:'Orbitron';word-break:break-all}
+
+  .pending-msg{background:rgba(255,215,0,0.1);border-left:4px solid #FFD700;border-radius:8px;padding:14px;margin-bottom:20px;font-size:14px;color:var(--text);line-height:1.6}
+  .pending-title{color:#FFD700;font-weight:700;margin-bottom:6px}
+
+  .subscription-section{background:rgba(0,255,136,0.08);border-left:4px solid var(--accent);border-radius:12px;padding:16px;margin-bottom:20px}
+  .subscription-title{font-family:'Orbitron';color:var(--accent);font-weight:700;margin-bottom:12px}
+  .subscription-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  .subscription-item{background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;border-left:2px solid var(--accent2)}
+  .subscription-label{font-size:11px;color:var(--muted);margin-bottom:4px}
+  .subscription-value{font-size:16px;font-weight:700;color:var(--accent)}
+
+  .tools-grid{display:grid;grid-template-columns:1fr;gap:15px}
+  .tool-card{background:rgba(42,42,58,0.7);border:1.5px solid rgba(0,255,136,0.2);border-radius:14px;padding:16px;cursor:pointer;transition:0.3s}
+  .tool-card:hover{border-color:var(--accent);box-shadow:0 0 15px rgba(0,255,136,0.2)}
+  .tool-icon{font-size:24px;margin-bottom:8px}
+  .tool-name{font-weight:700;color:var(--accent);margin-bottom:4px;font-family:'Orbitron'}
+  .tool-desc{font-size:13px;color:var(--muted)}
+  .tool-xp-cost{font-size:11px;color:#FFD700;font-weight:700;margin-top:4px}
+
+  .tool-content{background:rgba(18,18,26,0.7);border:1px solid rgba(0,255,136,0.15);border-radius:14px;padding:18px;margin-bottom:20px;display:none}
+  .tool-content.active{display:block}
+  .tool-close{float:right;background:rgba(255,46,99,0.2);border:none;color:var(--danger);padding:8px 12px;border-radius:6px;cursor:pointer;font-weight:700}
+
+  .output-box{background:rgba(0,0,0,0.3);border:1px solid rgba(0,217,255,0.2);border-radius:10px;padding:14px;margin:12px 0;min-height:50px;color:var(--text);word-break:break-word}
+  .copy-btn{background:rgba(0,255,136,0.2);border:1px solid var(--accent);color:var(--accent);padding:8px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;margin-top:10px;transition:all 0.3s}
+  .copy-btn:active{transform:scale(0.95)}
+
+  .output-section{margin:15px 0}
+  .output-label{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px}
+
+  .boost-btn{background:linear-gradient(90deg,#FFD700,#FF9500);color:#000;border:none;padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;font-family:'Orbitron';margin-top:8px;transition:all 0.3s}
+  .boost-btn:hover{transform:translateY(-2px);box-shadow:0 0 15px rgba(255,215,0,0.3)}
+  .boost-btn:disabled{background:#333;color:#777;cursor:not-allowed}
+
+  .extra-upload-box{background:rgba(255,215,0,0.08);border:1px solid rgba(255,215,0,0.4);border-radius:12px;padding:16px;margin-top:15px;text-align:center}
+  .extra-upload-box p{font-size:13px;color:var(--text);margin-bottom:10px;line-height:1.5}
+
+  .toast{
+    position:fixed;bottom:100px;left:50%;transform:translateX(-50%);
+    background:rgba(0,255,136,0.95);color:#000;padding:14px 24px;
+    border-radius:10px;font-weight:700;font-size:14px;
+    box-shadow:0 0 30px rgba(0,255,136,0.4);z-index:2000;
+    animation:slideUp 0.3s ease-out
+  }
+  .toast.error{background:rgba(255,46,99,0.95);color:#fff}
+  .toast.success{background:rgba(0,255,136,0.95);color:#000}
+  @keyframes slideUp{from{bottom:-50px;opacity:0}to{bottom:100px;opacity:1}}
+
+  @media(max-width:700px){
+    .plan-card{min-width:100%}
+    .tab-btn{padding:10px 16px;font-size:13px}
+    .profile-avatar{width:68px;height:68px;min-width:68px;font-size:22px}
+    .profile-name{font-size:18px}
+  }
+
+  .bottom-nav{
+    position:fixed;bottom:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-around;
+    background:rgba(10,10,15,0.95);backdrop-filter:blur(14px);
+    border-top:1px solid rgba(0,255,136,0.15);
+    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    z-index:100;
+  }
+  .bottom-nav-item{
+    display:flex;flex-direction:column;align-items:center;gap:4px;
+    color:var(--muted);font-size:11px;font-weight:600;
+    background:transparent;border:none;cursor:pointer;
+    transition:0.3s;
+  }
+  .bottom-nav-item.active-bottom{color:var(--accent)}
+  .bottom-nav-item svg{width:22px;height:22px}
+  .bottom-nav-plus{
+    width:56px;height:56px;min-width:56px;border-radius:50%;
+    background:linear-gradient(135deg, var(--accent), var(--accent2));
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 0 20px rgba(0,255,136,0.5);
+    margin-top:-30px;border:4px solid var(--bg);
+    cursor:pointer;
+    transition:0.3s;
+  }
+  .bottom-nav-plus:hover{transform:scale(1.1)}
+  .bottom-nav-plus svg{width:26px;height:26px;color:#000}
+
+  .verification-input-box{
+    background:rgba(0,217,255,0.08);border:1px solid rgba(0,217,255,0.3);
+    border-radius:10px;padding:14px;margin:10px 0
+  }
+  .verification-input{
+    width:100%;padding:12px;border-radius:8px;border:1px solid rgba(0,255,136,0.2);
+    background:rgba(0,0,0,0.3);color:var(--text);font-size:13px;
+    font-family:monospace;margin:8px 0;resize:vertical;min-height:60px
+  }
+  .verification-input::placeholder{color:var(--muted)}
+  .verification-btn{
+    background:linear-gradient(90deg, #00FF88, #00D9FF);color:#000;
+    border:none;padding:12px;border-radius:8px;width:100%;
+    cursor:pointer;font-weight:700;font-size:13px;font-family:'Orbitron';
+    box-shadow:0 0 15px rgba(0,255,136,0.2);transition:0.3s
+  }
+  .verification-btn:hover{box-shadow:0 0 25px rgba(0,255,136,0.4);transform:translateY(-2px)}
+  .verification-btn:disabled{background:#333;color:#777;cursor:not-allowed;box-shadow:none}
+
+  .task-section{
+    background:rgba(0,255,136,0.08);border-left:4px solid var(--accent);
+    border-radius:10px;padding:14px;margin:10px 0
+  }
+  .task-button{
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#000;border:none;padding:14px;border-radius:10px;
+    cursor:pointer;width:100%;font-weight:700;font-size:14px;
+    font-family:'Orbitron';box-shadow:0 0 15px rgba(0,255,136,0.2);
+    transition:0.3s
+  }
+  .task-button:hover{box-shadow:0 0 25px rgba(0,255,136,0.4);transform:translateY(-2px)}
+  .task-button:disabled{background:#333;color:#777;cursor:not-allowed;box-shadow:none}
+
+  .copy-link-input{
+    width:100%;padding:12px;border-radius:8px;
+    border:1px solid rgba(0,255,136,0.3);background:rgba(0,0,0,0.3);
+    color:var(--text);font-size:12px;font-family:monospace;
+  }
+
+  .pending-payment-box{
+    background:rgba(255,215,0,0.1);border:2px solid #FFD700;border-radius:12px;
+    padding:16px;margin-bottom:20px;border-left:4px solid #FFD700
+  }
+  .pending-payment-title{color:#FFD700;font-weight:700;font-size:16px;margin-bottom:10px;font-family:'Orbitron'}
+  .pending-payment-info{display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px}
+  .pending-payment-item{background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;border-left:2px solid #FFD700}
+  .pending-payment-label{color:var(--muted);font-size:11px;margin-bottom:3px}
+  .pending-payment-value{color:#FFD700;font-weight:700}
+
+  .active-plan-box{
+    background:rgba(0,255,136,0.1);border:2px solid var(--accent);border-radius:12px;
+    padding:16px;margin-bottom:20px;border-left:4px solid var(--accent)
+  }
+  .active-plan-title{color:var(--accent);font-weight:700;font-size:16px;margin-bottom:10px;font-family:'Orbitron'}
+
+  .coming-soon-modal{
+    position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);
+    background:rgba(18,18,26,0.95);border:2px solid var(--accent);padding:40px 30px;
+    border-radius:14px;text-align:center;z-index:9999;display:none;
+    backdrop-filter:blur(10px);box-shadow:0 0 50px rgba(0,255,136,0.3);
+  }
+
+  .coming-soon-modal.show{
+    display:block;
+    animation:slideUp 0.3s ease-out;
+  }
+
+  .coming-soon-title{
+    font-family:'Orbitron';font-size:28px;font-weight:700;
+    color:var(--accent);margin-bottom:12px;
+  }
+
+  .coming-soon-text{
+    color:var(--text);font-size:14px;margin-bottom:20px;line-height:1.6;
+  }
+
+  .coming-soon-btn{
+    background:linear-gradient(90deg, var(--accent), var(--accent2));
+    color:#000;border:none;padding:12px 30px;border-radius:8px;
+    cursor:pointer;font-weight:700;font-family:'Orbitron';
+    box-shadow:0 0 20px rgba(0,255,136,0.3);
+  }
+
+  /* NOTIFICATIONS MODAL */
+  .notifications-modal{
+    position:fixed;top:50%;left:50%;transform:translate(-50%, -50%);
+    background:rgba(18,18,26,0.98);border:2px solid var(--accent2);padding:25px;
+    border-radius:14px;z-index:9998;display:none;
+    backdrop-filter:blur(15px);box-shadow:0 0 60px rgba(0,217,255,0.4);
+    width:90%;max-width:450px;max-height:70vh;overflow-y:auto;
+  }
+
+  .notifications-modal.show{
+    display:block;
+    animation:slideUp 0.3s ease-out;
+  }
+
+  .notifications-modal-header{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:20px;border-bottom:1px solid rgba(0,217,255,0.2);padding-bottom:15px;
+  }
+
+  .notifications-modal-title{
+    font-family:'Orbitron';font-size:22px;font-weight:700;
+    color:var(--accent2);
+  }
+
+  .notifications-close{
+    background:rgba(255,46,99,0.2);border:none;color:var(--danger);
+    font-size:24px;cursor:pointer;width:32px;height:32px;
+    display:flex;align-items:center;justify-content:center;
+    border-radius:50%;transition:0.3s;
+  }
+
+  .notifications-close:hover{
+    background:rgba(255,46,99,0.4);transform:scale(1.1);
+  }
+
+  .notification-item{
+    background:rgba(0,217,255,0.08);border-left:3px solid var(--accent2);
+    border-radius:10px;padding:14px;margin-bottom:12px;
+  }
+
+  .notification-content{
+    color:var(--text);font-size:14px;line-height:1.5;word-break:break-word;
+  }
+
+  .notification-views{
+    font-size:11px;color:var(--muted);margin-top:8px;padding-top:8px;
+    border-top:1px solid rgba(0,217,255,0.15);
+  }
+
+  .notification-views b{color:var(--accent2);font-weight:700}
+
+  .notif-delete-btn{
+    background:rgba(255,46,99,0.15);border:1px solid rgba(255,46,99,0.4);
+    color:var(--danger);font-size:14px;cursor:pointer;
+    width:26px;height:26px;min-width:26px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    transition:0.3s;flex-shrink:0;
+  }
+  .notif-delete-btn:hover{
+    background:rgba(255,46,99,0.35);transform:scale(1.1);
+  }
+
+  .social-task-item{
+    background:rgba(0,217,255,0.06);border:1px solid rgba(0,217,255,0.2);
+    border-radius:12px;padding:14px;margin-bottom:12px;
+  }
+  .social-task-top{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;
+  }
+  .social-task-label{font-size:14px;color:var(--text);font-weight:600}
+  .social-task-xp{font-size:13px;color:#FFD700;font-weight:700;white-space:nowrap}
+  .social-task-claimed{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:13px;color:var(--muted);
+  }
+
+</style>
+</head>
+<body>
+
+<!-- AD PANEL -->
+<div class="ad-panel" id="adPanel">
+  <button class="ad-close-btn" id="adCloseBtn" onclick="closeAdPanel()">✕</button>
+  <div class="ad-video" id="adVideoContainer">
+    <video id="adVideo" playsinline style="width:100%;height:100%;object-fit:cover;display:none"></video>
+    <div id="adWaitMsg" style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--accent2);font-family:'Orbitron';font-weight:700">⏳ Loading ad...</div>
+  </div>
+  <div class="ad-timer" id="adTimer">5s</div>
+</div>
+
+<!-- INTERNET WARNING -->
+<div class="internet-warning" id="internetWarning">
+  ⏳ Internet slow! Please wait...
+</div>
+
+<!-- COMING SOON MODAL -->
+<div class="coming-soon-modal" id="comingSoonModal">
+  <div class="coming-soon-title">🚀 Coming Soon</div>
+  <div class="coming-soon-text">
+    This feature is coming very soon!<br>
+    We're working to make it even better for you 💚
+  </div>
+  <button class="coming-soon-btn" onclick="closeComingSoon()">Got it!</button>
+</div>
+
+<!-- NOTIFICATIONS MODAL -->
+<div class="notifications-modal" id="notificationsModal">
+  <div class="notifications-modal-header">
+    <div class="notifications-modal-title">📢 Announcements</div>
+    <button class="notifications-close" onclick="closeNotificationsModal()">✕</button>
+  </div>
+  <div id="notificationsContent"></div>
+</div>
+
+<!-- EDIT NAME MODAL -->
+<div class="edit-name-modal" id="editNameModal">
+  <div class="edit-name-title">✏️ Edit Your Name</div>
+  <label class="edit-name-label" id="editNameCostLabel">First time: 10 XP</label>
+  <input type="text" class="edit-name-input" id="editNameInput" placeholder="Enter your name" maxlength="20">
+  <div class="edit-name-cost" id="editNameCostDisplay">⚡ Cost: 10 XP</div>
+  <div class="edit-name-buttons">
+    <button class="edit-name-btn confirm" onclick="confirmEditName()">✅ Confirm</button>
+    <button class="edit-name-btn cancel" onclick="closeEditNameModal()">❌ Cancel</button>
+  </div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">⚡ GrowX</div>
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  <div class="loading-text" id="loadingText">INITIALIZING...</div>
+</div>
+
+<!-- SIGNUP SCREEN -->
+<div class="signup-screen" id="signupScreen">
+  <div class="signup-container">
+    <div class="signup-title">⚡ GrowX</div>
+    <div class="signup-subtitle">
+      Welcome to the creator economy 🎬<br>
+      Create your account to get started
+    </div>
+
+    <div class="signup-form">
+      <div class="signup-input-group">
+        <label class="signup-label">📧 Email Address</label>
+        <input type="email" id="signupEmail" class="signup-input" placeholder="your@email.com" required>
+      </div>
+
+      <div class="signup-input-group">
+        <label class="signup-label">🔐 Password</label>
+        <input type="password" id="signupPassword" class="signup-input" placeholder="Enter new password" required>
+        <span class="signup-hint">💡 Hint: Use 8+ characters, mix uppercase, numbers & symbols</span>
+      </div>
+
+      <button class="signup-btn" id="signupBtn" onclick="handleSignup()">
+        ✨ CREATE ACCOUNT
+      </button>
+
+      <div id="signupMessage"></div>
+
+      <div style="margin-top:15px;text-align:center;color:var(--muted);font-size:13px">
+        Already have an account? <a href="javascript:void(0)" onclick="showLoginScreen()" style="color:var(--accent);font-weight:700;text-decoration:none">Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div class="signup-screen" id="loginScreen">
+  <div class="signup-container">
+    <div class="signup-title">⚡ GrowX</div>
+    <div class="signup-subtitle">
+      Welcome back 👋<br>
+      Login with your existing account
+    </div>
+
+    <div class="signup-form">
+      <div class="signup-input-group">
+        <label class="signup-label">📧 Email Address</label>
+        <input type="email" id="loginEmail" class="signup-input" placeholder="your@email.com" required>
+      </div>
+
+      <div class="signup-input-group">
+        <label class="signup-label">🔐 Password</label>
+        <input type="password" id="loginPassword" class="signup-input" placeholder="Enter your password" required>
+      </div>
+
+      <button class="signup-btn" id="loginBtn" onclick="handleLogin()">
+        🔓 LOGIN
+      </button>
+
+      <div id="loginMessage"></div>
+
+      <div style="margin-top:15px;text-align:center;color:var(--muted);font-size:13px">
+        New here? <a href="javascript:void(0)" onclick="showSignupScreenFromLogin()" style="color:var(--accent);font-weight:700;text-decoration:none">Create Account</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BANNED SCREEN -->
+<div class="signup-screen" id="bannedScreen">
+  <div class="signup-container">
+    <div class="signup-title" style="color:var(--danger);text-shadow:0 0 20px var(--danger)">🚫 Banned</div>
+    <div class="signup-subtitle">
+      Your account has been banned by the admin.<br>
+      Contact support if you think this is a mistake.
+    </div>
+    <a href="https://t.me/YourTelegramBotUsername" target="_blank" class="banned-telegram-link">
+      📱 Contact Support on Telegram
+    </a>
+  </div>
+</div>
+
+<div class="header" style="display:none" id="headerBar">
+  <div class="header-left">⚡ GrowX</div>
+  <div class="header-right">
+    <button class="notification-btn" onclick="openNotificationsModal()">
+      🔔
+      <span class="notification-badge" id="notificationBadge" style="display:none">0</span>
+    </button>
+    <span class="points">XP: <span id="points">0</span></span>
+  </div>
+</div>
+
+<div class="nav" style="display:none" id="navBar">
+  <button class="active" onclick="showPage('feed', this)">Feed</button>
+  <button onclick="showPage('pro', this)">Upgrade Plan </button>
+</div>
+
+<!-- FEED -->
+<div id="feed" class="page active">
+  <h3>Live Feed</h3>
+  <div class="category-filter" id="categoryFilter"></div>
+  <div class="plan-filter" id="planFilter"></div>
+  <div id="videoFeed"></div>
+</div>
+
+<!-- UPLOAD -->
+<div id="upload" class="page">
+  <h3>Submit Your Video</h3>
+  <div class="card">
+    <select id="category">
+      <option value="">Select Video Category</option>
+      <option value="Gaming">🎮 Gaming</option>
+      <option value="Vlog">📹 Vlog</option>
+      <option value="Education">📚 Education</option>
+      <option value="Music">🎵 Music</option>
+      <option value="Comedy">😂 Comedy</option>
+      <option value="Tech">💻 Tech</option>
+      <option value="Lifestyle">✨ Lifestyle</option>
+      <option value="Other">📌 Other</option>
+    </select>
+    <input type="text" id="ytLink" placeholder="Paste YouTube video link">
+    <input type="text" id="title" placeholder="Video title">
+    <input type="text" id="coverImage" placeholder="Paste image URL (cover)">
+    <button class="primary" onclick="submitVideo()">UPLOAD VIDEO</button>
+    <p class="limit" id="uploadLimit" style="margin-top:10px;font-size:12px;color:var(--muted)"></p>
+    <div class="extra-upload-box" id="extraUploadBox" style="display:none">
+      <p>⚡ Daily upload limit reached!<br>Spend 500 XP to unlock 1 extra video upload.</p>
+      <button class="primary" onclick="unlockExtraUpload()">Unlock Extra Upload (500 XP)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ANALYTICS -->
+<div id="analytics" class="page">
+  <h3>Creator Analytics</h3>
+
+  <div class="card">
+    <h4 style="font-size:16px;color:var(--accent);margin-bottom:15px">📊 XP EARNED (Last 7 Days)</h4>
+    <canvas id="xpChart" style="max-height:300px"></canvas>
+  </div>
+
+  <div class="card">
+    <h4 style="font-size:16px;color:var(--accent);margin-bottom:15px">📈 Overall Stats</h4>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px">
+      <div style="background:rgba(0,255,136,0.1);padding:15px;border-radius:10px;border-left:3px solid var(--accent)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Total XP</div>
+        <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:'Orbitron'" id="totalXP">0</div>
+      </div>
+      <div style="background:rgba(0,217,255,0.1);padding:15px;border-radius:10px;border-left:3px solid var(--accent2)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Total Videos</div>
+        <div style="font-size:28px;font-weight:700;color:var(--accent2);font-family:'Orbitron'" id="totalVideosAna">0</div>
+      </div>
+      <div style="background:rgba(255,51,102,0.1);padding:15px;border-radius:10px;border-left:3px solid var(--danger)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Total Comments Received</div>
+        <div style="font-size:28px;font-weight:700;color:var(--danger);font-family:'Orbitron'" id="totalFeedbacksAna">0</div>
+      </div>
+      <div style="background:rgba(0,255,136,0.1);padding:15px;border-radius:10px;border-left:3px solid var(--accent)">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:5px">Avg Comments/Video</div>
+        <div style="font-size:28px;font-weight:700;color:var(--accent);font-family:'Orbitron'" id="avgFeedback">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h4 style="font-size:16px;color:var(--accent);margin-bottom:15px">🎬 Video Performance &amp; Comments</h4>
+    <div id="videoPerformance" style="max-height:500px;overflow-y:auto"></div>
+  </div>
+
+  <div class="card">
+    <h4 style="font-size:16px;color:var(--accent);margin-bottom:15px">🏷️ Category Breakdown</h4>
+    <canvas id="categoryChart" style="max-height:300px"></canvas>
+  </div>
+
+  <div class="card">
+    <h4 style="font-size:16px;color:var(--accent);margin-bottom:15px">🌟 Best Video</h4>
+    <div id="bestVideoInfo" style="padding:15px;background:rgba(0,255,136,0.05);border-radius:10px;border-left:3px solid var(--accent)"></div>
+  </div>
+</div>
+
+<!-- TOOLS PAGE -->
+<div id="tools" class="page">
+  <h3>Creator Tools 🛠️</h3>
+
+  <div class="tools-grid">
+    <div class="tool-card" onclick="activateTool('hashtaggen')">
+      <div class="tool-icon">#️⃣</div>
+      <div class="tool-name">Trending Hashtag Generator</div>
+      <div class="tool-desc">Generate trending hashtags</div>
+    </div>
+
+    <div class="tool-card" onclick="activateTool('besttime')">
+      <div class="tool-icon">⏰</div>
+      <div class="tool-name">Best Time to Post</div>
+      <div class="tool-desc">Find optimal posting times</div>
+    </div>
+
+    <div class="tool-card" onclick="activateTool('transcript')">
+      <div class="tool-icon">📋</div>
+      <div class="tool-name">Video Transcript & Metadata</div>
+      <div class="tool-desc">Extract video info (category, title, etc)</div>
+      <div class="tool-xp-cost">⚡ Costs 50 XP</div>
+    </div>
+  </div>
+
+  <!-- HASHTAG GENERATOR -->
+  <div class="tool-content" id="hashtaggen-tool">
+    <button class="tool-close" onclick="closeTool()">✕ Close</button>
+    <h4 style="color:var(--accent);margin-bottom:15px">#️⃣ Hashtag Generator</h4>
+    <input type="text" id="hashKeyword" placeholder="Enter your niche (e.g., fitness)">
+    <button class="primary" onclick="generateHashtags()">Generate Hashtags</button>
+    <div class="output-box" id="hashOutput" style="display:none;margin-top:15px"></div>
+    <button class="copy-btn" id="hashCopyBtn" style="display:none" onclick="copyHashtags()">📋 Copy Hashtags</button>
+  </div>
+
+  <!-- BEST TIME TO POST -->
+  <div class="tool-content" id="besttime-tool">
+    <button class="tool-close" onclick="closeTool()">✕ Close</button>
+    <h4 style="color:var(--accent);margin-bottom:15px">⏰ Best Time to Post</h4>
+    <select id="platform">
+      <option value="">Select Platform</option>
+      <option value="youtube">YouTube</option>
+      <option value="instagram">Instagram</option>
+      <option value="tiktok">TikTok</option>
+      <option value="twitter">Twitter</option>
+      <option value="facebook">Facebook</option>
+    </select>
+    <select id="audience">
+      <option value="">Select Your Audience Region</option>
+      <option value="india">India (IST)</option>
+      <option value="us">USA (EST)</option>
+      <option value="uk">UK (GMT)</option>
+      <option value="asia">Asia (UTC+5:30)</option>
+    </select>
+    <button class="primary" onclick="generateBestTime()">Get Best Times</button>
+    <div id="bestTimeOutput" style="margin-top:15px"></div>
+  </div>
+
+  <!-- TRANSCRIPT EXTRACTOR -->
+  <div class="tool-content" id="transcript-tool">
+    <button class="tool-close" onclick="closeTool()">✕ Close</button>
+    <h4 style="color:var(--accent);margin-bottom:15px">📋 Video Transcript & Metadata <span style="color:#FFD700;font-size:12px">(50 XP)</span></h4>
+    <input type="text" id="videoLink" placeholder="Paste YouTube video link">
+    <button class="primary" onclick="extractVideoData()">Extract Video Info (50 XP)</button>
+    <div id="transcriptOutput" style="margin-top:15px"></div>
+  </div>
+
+</div>
+
+<!-- PAYMENT PAGE -->
+<div id="payment" class="page">
+  <div class="payment-header">
+    <div class="payment-amount" id="paymentAmount">₹99</div>
+    <div class="payment-plan" id="paymentPlan">Monthly Plan</div>
+    <div class="payment-validity" id="paymentValidity">30 Days Validity</div>
+  </div>
+
+  <div class="payment-box">
+    <label class="payment-label">Send money to this UPI ID:</label>
+    <div class="upi-display">
+      <div class="upi-text">💳 UPI ID:</div>
+      <div class="upi-id" id="upiDisplay">Loading...</div>
+    </div>
+    <button class="secondary" onclick="copyUPI()">📋 Copy UPI ID</button>
+  </div>
+
+  <div class="payment-box">
+    <label class="payment-label">Reference Number (Transaction ID):</label>
+    <input type="text" id="referenceInput" placeholder="e.g., UTR1234567890">
+    <button class="primary" onclick="submitPayment()">Submit Payment</button>
+  </div>
+
+  <div class="payment-steps">
+    <h4>📋 Steps to Subscribe:</h4>
+    <div class="payment-step">
+      <div class="payment-step-num">1</div>
+      <div class="payment-step-text">Note down or copy the UPI ID given above</div>
+    </div>
+    <div class="payment-step">
+      <div class="payment-step-num">2</div>
+      <div class="payment-step-text">Open Google Pay / PhonePe / Paytm</div>
+    </div>
+    <div class="payment-step">
+      <div class="payment-step-num">3</div>
+      <div class="payment-step-text">Send the amount to this UPI ID</div>
+    </div>
+    <div class="payment-step">
+      <div class="payment-step-num">4</div>
+      <div class="payment-step-text">Paste the Reference/UTR number in the box above and click Submit</div>
+    </div>
+  </div>
+
+  <div class="pending-msg">
+    <div class="pending-title">⏳ Your subscription is pending</div>
+    Payment will be verified within 1-3 hours.
+  </div>
+
+  <button class="secondary" onclick="backToPlans()">⬅️ Back to Plans</button>
+</div>
+
+<!-- PRO -->
+<div id="pro" class="page">
+  <div class="plan-selector">
+    <h2>Upgrade a Plan</h2>
+    <div class="plan-tabs">
+      <button class="tab-btn active" id="tab-daily" data-plan="daily" onclick="selectPlan('daily')">Daily</button>
+      <button class="tab-btn" id="tab-weekly" data-plan="weekly" onclick="selectPlan('weekly')">Weekly</button>
+      <button class="tab-btn" id="tab-monthly" data-plan="monthly" onclick="selectPlan('monthly')">Monthly</button>
+    </div>
+    <div class="plans-scroll" id="plansScroll">
+      <div class="plan-card" id="card-daily">
+        <div class="plan-header"><div class="plan-title">Daily</div><div class="plan-tagline">Choose Your Tier</div></div>
+        
+        <div class="daily-pricing-grid">
+          <div class="daily-price-option selected" id="daily-free" onclick="selectDailyTier('free', this)">
+            <div class="daily-tier-label" style="color:#00D9FF">FREE</div>
+            <div class="daily-tier-price" style="color:var(--text)">₹0</div>
+            <div class="daily-tier-sub">Forever</div>
+          </div>
+          
+          <div class="daily-price-option" id="daily-basic" onclick="selectDailyTier('basic', this)">
+            <div class="daily-tier-label" style="color:#00FF88">BASIC</div>
+            <div class="daily-tier-price" style="color:var(--text)">₹5.00</div>
+            <div class="daily-tier-sub">1x · daily</div>
+          </div>
+          
+          <div class="daily-price-option" id="daily-gold" onclick="selectDailyTier('gold', this)">
+            <div class="daily-tier-label" style="color:#FFD700">GOLD</div>
+            <div class="daily-tier-price" style="color:var(--text)">₹30</div>
+            <div class="daily-tier-sub">unlimited</div>
+          </div>
+          
+          <div class="daily-price-option" id="daily-premium" onclick="selectDailyTier('premium', this)">
+            <div class="daily-tier-label" style="color:#DD33FA">PREMIUM</div>
+            <div class="daily-tier-price" style="color:var(--text)">₹50</div>
+            <div class="daily-tier-sub">unlimited</div>
+          </div>
+        </div>
+        
+        <button class="primary" id="dailyBuyBtn" onclick="buySelectedDailyTier()" style="margin-top:12px;background:linear-gradient(90deg, #00D9FF, #00D9FFdd);color:#000">Get Free Plan</button>
+        
+        <div class="plan-features" id="dailyFeatures" style="border-top-color:rgba(0,217,255,0.4)">
+           <p><b style="color:#00D9FF">⭐ FREE PLAN FEATURES</b></p>
+          <p><span style="color:#00D9FF">✓</span> Max User Views — <b>10 Users Limit</b></p>
+          <p><span style="color:#00D9FF">✓</span> Video Upload — <b>3</b></p>
+          <p><span style="color:#00D9FF">✓</span> Max XP earning limit — <b>5,000 XP</b></p>
+          <p><span style="color:#00D9FF">✓</span> Free Badge on Videos</p>
+          <p><span style="color:#00D9FF">✓</span> 10 xp on your Videos</p>
+          <p><span style="color:#00D9FF">✓</span> 🕒 24 hours active</p>
+        </div>
+      </div>
+      <div class="plan-card" id="card-weekly">
+        <div class="plan-header"><div class="plan-title">Weekly</div><div class="plan-tagline">Best Value</div></div>
+        <div class="plan-pricing"><div class="price-box selected"><div class="price-circle">●</div><div class="price-amount">₹150.00</div><div class="price-sub">5x more usage<br>Billed weekly</div></div></div>
+        <button class="primary" onclick="buyPlan('weekly', 150)">Get Weekly plan</button>
+        <div class="plan-features">
+          <p><b>⭐ WEEKLY PLAN FEATURES </b></p>
+          <p>✓ Max User Views — <b>250 Users Limit</b></p>
+          <p>✓ Video Upload — <b>50</b></p>
+          <p>✓ Max XP earning limit — <b>50000 XP</b></p>
+          <p>✓ Flash Badge on Videos</p>
+          <p>✓ 50 xp on your Videos</p>
+          <p>✓ 🕒 7 days</p>
+        </div>
+      </div>
+      <div class="plan-card" id="card-monthly">
+        <div class="plan-header"><div class="plan-title">Monthly</div><div class="plan-tagline">Maximum Power</div></div>
+        <div class="plan-pricing"><div class="price-box selected"><div class="price-circle">●</div><div class="price-amount">₹700.00</div><div class="price-sub">Unlimited access<br>24 hours validity</div></div></div>
+        <button class="primary" onclick="buyPlan('monthly', 700)">Get Monthly plan</button>
+        <div class="plan-features">
+          <p><b>⭐ MONTHLY PLAN FEATURES </b></p>
+          <p>✓ Max User Views — <b>500 Users Limit</b></p>
+          <p>✓ Video Upload — <b>Unlimited (100+)</b></p>
+          <p>✓ Max XP earning limit — <b>50000 XP</b></p>
+          <p>✓ VIP Badge on Videos</p>
+          <p>✓ 50 xp on your Videos</p>
+          <p>✓ 🕒 30 days </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div id="profile" class="page">
+  <div class="profile-page">
+    <div class="profile-card">
+      <div class="profile-top">
+        <div class="profile-avatar" id="avatar">CR</div>
+        <div>
+          <div class="profile-name" id="name">Creator</div>
+          <div class="profile-username">@<span id="userEmail">user</span></div>
+          <div class="profile-badge" id="badgeTop">FREE</div>
+        </div>
+      </div>
+      <button class="primary" style="margin-top:10px" onclick="openEditNameModal()">✏️ Edit Name (10 XP)</button>
+      <div class="profile-stats">
+        <div class="profile-stat"><b id="profileViews">0</b><span>Views</span></div>
+        <div class="profile-stat"><b id="profileXP">0</b><span>XP</span></div>
+        <div class="profile-stat"><b id="profileTotalVideos">0</b><span>Videos</span></div>
+      </div>
+    </div>
+
+    <!-- ACTIVE PLAN SECTION -->
+    <div id="activePlanSection" style="display:none">
+      <div class="profile-card">
+        <div class="active-plan-box">
+          <div class="active-plan-title">✅ Active Plan</div>
+          <div class="subscription-info">
+            <div class="subscription-item">
+              <div class="subscription-label">Plan Type</div>
+              <div class="subscription-value" id="activePlanName">-</div>
+            </div>
+            <div class="subscription-item">
+              <div class="subscription-label">Status</div>
+              <div class="subscription-value" id="activePlanStatus">-</div>
+            </div>
+            <div class="subscription-item">
+              <div class="subscription-label">Expires In</div>
+              <div class="subscription-value" id="activePlanExpires">-</div>
+            </div>
+            <div class="subscription-item">
+              <div class="subscription-label">Amount Paid</div>
+              <div class="subscription-value" id="activePlanAmount">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PENDING PAYMENT SECTION -->
+    <div id="pendingPaymentSection" style="display:none">
+      <div class="profile-card">
+        <div class="pending-payment-box">
+          <div class="pending-payment-title">⏳ Pending Subscription</div>
+          <div class="pending-payment-info">
+            <div class="pending-payment-item">
+              <div class="pending-payment-label">Plan Requested</div>
+              <div class="pending-payment-value" id="pendingPlanName">-</div>
+            </div>
+            <div class="pending-payment-item">
+              <div class="pending-payment-label">Amount</div>
+              <div class="pending-payment-value" id="pendingPlanAmount">-</div>
+            </div>
+            <div class="pending-payment-item">
+              <div class="pending-payment-label">Reference Number</div>
+              <div class="pending-payment-value" id="pendingRefNumber">-</div>
+            </div>
+            <div class="pending-payment-item">
+              <div class="pending-payment-label">Submitted At</div>
+              <div class="pending-payment-value" id="pendingSubmittedAt">-</div>
+            </div>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:#FFD700;padding-top:12px;border-top:1px solid #FFD700">
+            ⏳ Your payment is being verified. This usually takes 1-3 hours.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBSCRIPTION STATUS SECTION -->
+    <div class="profile-card">
+      <div class="subscription-section">
+        <div class="subscription-title">💳 Subscription Status</div>
+        <div class="subscription-info">
+          <div class="subscription-item">
+            <div class="subscription-label">Current Plan</div>
+            <div class="subscription-value" id="subStatus">Free</div>
+          </div>
+          <div class="subscription-item">
+            <div class="subscription-label">Status</div>
+            <div class="subscription-value" id="subPaymentStatus">None</div>
+          </div>
+          <div class="subscription-item">
+            <div class="subscription-label">Valid Till</div>
+            <div class="subscription-value" id="subExpiry">No plan</div>
+          </div>
+          <div class="subscription-item">
+            <div class="subscription-label">Time Remaining</div>
+            <div class="subscription-value" id="subTimeLeft">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-title">Creator Info</div>
+      <div class="profile-info"><span>Plan</span><b id="profilePlan">Free</b></div>
+      <div class="profile-info"><span>Badge</span><b id="profileBadge">FREE</b></div>
+      <div class="profile-info"><span>AI Questions</span><b id="profileAI">0/day</b></div>
+      <div class="profile-info"><span>Video Limit</span><b id="profileUpload">3/day</b></div>
+      <div class="profile-info"><span>User View Limit</span><b id="profileUserLimit">10 Users</b></div>
+      <div class="profile-info"><span>Validity</span><b id="profileExpiry">No active plan</b></div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-title">⏳ Pending Tasks</div>
+      <div id="pendingTasksList"></div>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-title">Account</div>
+      <div class="profile-info"><span>Status</span><b id="profileStatus" class="free">FREE</b></div>
+      <div class="profile-info"><span>Creator Type</span><b id="creatorType">BASIC CREATOR</b></div>
+      <div class="profile-info"><span>Your Email</span><b id="yourEmail" style="color:var(--accent2);word-break:break-all">-</b></div>
+      <button class="profile-reset" onclick="resetData()">RESET ALL DATA</button>
+    </div>
+
+    <div class="profile-card">
+      <div class="profile-title">🎁 Social Tasks (One-Time 250 XP Each)</div>
+      <div id="socialTasksList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV BAR -->
+<div class="bottom-nav" style="display:none" id="bottomNav">
+  <button class="bottom-nav-item active-bottom" onclick="showBottomPage('feed')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+    Home
+  </button>
+  <button class="bottom-nav-item" onclick="showBottomPage('analytics')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+    Analytics
+  </button>
+  <button class="bottom-nav-plus" onclick="showBottomPage('upload')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+  <button class="bottom-nav-item" onclick="showBottomPage('tools')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Tools
+  </button>
+  <button class="bottom-nav-item" onclick="showBottomPage('profile')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    Profile
+  </button>
+</div>
+
+<script>
+// ============ FIREBASE CONFIG ============
+const firebaseConfig = {
+    apiKey: "AIzaSyAXjvXzQ-UYwlyOJuUOO9-gKkuyvUZEZyU",
+    authDomain: "growx-test-5f4a2.firebaseapp.com",
+    projectId: "growx-test-5f4a2",
+    storageBucket: "growx-test-5f4a2.firebasestorage.app",
+    messagingSenderId: "1076103865127",
+    appId: "1:1076103865127:web:bb965218f99b2969a0bf02"
+};
+
+let firebaseReady = false;
+let auth = null;
+let db = null;
+let currentUser = null;
+
+try {
+  firebase.initializeApp(firebaseConfig);
+  auth = firebase.auth();
+  db = firebase.firestore();
+  firebaseReady = true;
+  console.log('✅ Firebase initialized');
+} catch(e) {
+  console.log('Firebase init error:', e.message);
+}
+
+// ============ NOTIFICATIONS SYSTEM ============
+let allNotifications = [];
+let userNotificationsViewed = {};
+let dismissedNotifications = {};
+
+async function loadNotifications(){
+  if(!firebaseReady || !db) return;
+  
+  try {
+    const snapshot = await db.collection('notifications')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+    
+    allNotifications = [];
+    snapshot.forEach(doc => {
+      allNotifications.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    updateNotificationBadge();
+    console.log('✅ Notifications loaded:', allNotifications.length);
+  } catch(err) {
+    console.log('Notifications load error:', err);
+  }
+}
+
+function getVisibleNotifications(){
+  return allNotifications.filter(n => !dismissedNotifications[n.id]);
+}
+
+function updateNotificationBadge(){
+  let unreadCount = 0;
+  getVisibleNotifications().forEach(notif => {
+    if(!userNotificationsViewed[notif.id]){
+      unreadCount++;
+    }
+  });
+  
+  let badge = document.getElementById('notificationBadge');
+  if(unreadCount > 0){
+    badge.innerText = unreadCount;
+    badge.style.display = 'flex';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function openNotificationsModal(){
+  document.getElementById('notificationsModal').classList.add('show');
+  renderNotifications();
+}
+
+function closeNotificationsModal(){
+  document.getElementById('notificationsModal').classList.remove('show');
+}
+
+function renderNotifications(){
+  let html = '';
+  let visibleNotifications = getVisibleNotifications();
+  
+  if(visibleNotifications.length === 0){
+    html = '<div style="text-align:center;padding:20px;color:var(--muted)">No announcements</div>';
+  } else {
+    visibleNotifications.forEach((notif, idx) => {
+      userNotificationsViewed[notif.id] = true;
+      
+      let viewCount = notif.viewedBy ? notif.viewedBy.length : 0;
+      html += `<div class="notification-item" id="notifItem_${notif.id}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div class="notification-content">${notif.message}</div>
+          <button class="notif-delete-btn" onclick="deleteNotification('${notif.id}')" title="Delete">✕</button>
+        </div>
+        <div class="notification-views">
+          👁️ <b>${viewCount}</b> people viewed this
+        </div>
+      </div>`;
+    });
+  }
+  
+  document.getElementById('notificationsContent').innerHTML = html;
+  updateNotificationBadge();
+  
+  // Track that user viewed notifications
+  if(currentUser && visibleNotifications.length > 0){
+    trackNotificationViews();
+  }
+}
+
+function deleteNotification(notifId){
+  dismissedNotifications[notifId] = true;
+  saveDataToFirestore();
+  renderNotifications();
+  showToast('✅ Notification deleted');
+}
+
+async function trackNotificationViews(){
+  if(!firebaseReady || !db || !currentUser) return;
+  
+  try {
+    for(let notif of getVisibleNotifications()){
+      if(!userNotificationsViewed[notif.id]) continue;
+      
+      let viewedBy = notif.viewedBy || [];
+      if(!viewedBy.includes(currentUser.uid)){
+        viewedBy.push(currentUser.uid);
+        
+        await db.collection('notifications').doc(notif.id).update({
+          viewedBy: viewedBy
+        });
+      }
+    }
+  } catch(err) {
+    console.log('Track views error:', err);
+  }
+}
+
+// ============ UPI SYNC FROM FIRESTORE ============
+let adminUPI = 'bshsb@upi'; // Default fallback
+
+async function loadUPIFromFirestore(){
+  if(!firebaseReady || !db) return;
+  
+  try {
+    const adminDoc = await db.collection('settings').doc('payment').get();
+    if(adminDoc.exists){
+      const data = adminDoc.data();
+      if(data.upi || data.upiId){
+        adminUPI = data.upi || data.upiId;
+        console.log('✅ UPI loaded from Firestore:', adminUPI);
+      }
+    }
+  } catch(err) {
+    console.log('UPI load error:', err);
+  }
+}
+
+// Listen to real-time UPI changes
+function startUPIListener(){
+  if(!firebaseReady || !db) return;
+  
+  db.collection('settings').doc('payment').onSnapshot(doc => {
+    if(doc.exists && (doc.data().upi || doc.data().upiId)){
+      adminUPI = doc.data().upi || doc.data().upiId;
+      console.log('🔄 UPI updated:', adminUPI);
+      
+      // Update UPI display if payment page is open
+      let upiDisplay = document.getElementById('upiDisplay');
+      if(upiDisplay){
+        upiDisplay.innerText = adminUPI;
+      }
+    }
+  });
+}
+
+// ============ AD PANEL SYSTEM ============
+let adTimerInterval = null;
+let adTimeRemaining = 5;
+let adCanClose = false;
+let videoUploadCounter = 0;
+
+const AD_TARGET_RATIO = 9 / 16;
+const AD_RATIO_TOLERANCE = 0.06;
+
+function initAdPanel(){
+  setTimeout(() => {
+    showAdPanel();
+  }, 1300);
+}
+
+function showAdPanel(){
+  let videoElement = document.getElementById('adVideo');
+  let waitMsg = document.getElementById('adWaitMsg');
+  let adPanel = document.getElementById('adPanel');
+  let closeBtn = document.getElementById('adCloseBtn');
+
+  closeBtn.classList.remove('show');
+  adCanClose = false;
+  if(adTimerInterval) clearInterval(adTimerInterval);
+  adTimeRemaining = 5;
+  document.getElementById('adTimer').innerText = adTimeRemaining + 's';
+
+  videoElement.style.display = 'none';
+  waitMsg.style.display = 'flex';
+  waitMsg.innerText = '⏳ Loading ad...';
+
+  videoElement.src = 'adsopen.mp4';
+  videoElement.muted = false;
+  videoElement.volume = 1.0;
+  videoElement.load();
+
+  videoElement.onerror = () => {
+    console.log('Ad video failed to load');
+  };
+
+  videoElement.onloadedmetadata = () => {
+    let w = videoElement.videoWidth;
+    let h = videoElement.videoHeight;
+
+    if(!w || !h){
+      console.log('Ad skipped: could not read video dimensions');
+      return;
+    }
+
+    let ratio = w / h;
+
+    if(Math.abs(ratio - AD_TARGET_RATIO) > AD_RATIO_TOLERANCE){
+      console.log(`Ad skipped: video ratio ${ratio.toFixed(3)} is not 9:16`);
+      return;
+    }
+
+    adPanel.classList.add('show');
+    document.body.classList.add('ad-blur-active');
+
+    waitMsg.style.display = 'none';
+    videoElement.style.display = 'block';
+
+    videoElement.muted = false;
+    videoElement.volume = 1.0;
+    
+    let playPromise = videoElement.play();
+
+    if(playPromise !== undefined){
+      playPromise.catch(() => {
+        console.log('Autoplay with sound blocked, trying muted...');
+        videoElement.muted = true;
+        videoElement.play().catch(err => console.log('Ad autoplay blocked:', err));
+      });
+    }
+
+    startAdTimer();
+  };
+}
+
+function startAdTimer(){
+  if(adTimerInterval) clearInterval(adTimerInterval);
+  adTimeRemaining = 5;
+  updateAdTimer();
+
+  adTimerInterval = setInterval(() => {
+    adTimeRemaining--;
+    updateAdTimer();
+
+    if(adTimeRemaining <= 0){
+      clearInterval(adTimerInterval);
+      adCanClose = true;
+      document.getElementById('adCloseBtn').classList.add('show');
+      document.getElementById('adTimer').innerText = '';
+    }
+  }, 1000);
+}
+
+function updateAdTimer(){
+  if(adTimeRemaining > 0){
+    document.getElementById('adTimer').innerText = adTimeRemaining + 's';
+  }
+}
+
+function closeAdPanel(){
+  if(!adCanClose) return;
+
+  if(adTimerInterval) clearInterval(adTimerInterval);
+  let adPanel = document.getElementById('adPanel');
+  adPanel.classList.remove('show');
+  document.body.classList.remove('ad-blur-active');
+
+  let videoElement = document.getElementById('adVideo');
+  videoElement.pause();
+}
+
+// ============ INTERNET SPEED CHECK ============
+function checkInternetSpeed(){
+  let slowConnection = !navigator.onLine || 
+                       (navigator.connection && navigator.connection.effectiveType === 'slow-2g');
+  
+  if(slowConnection){
+    document.getElementById('internetWarning').style.display = 'flex';
+    setTimeout(() => {
+      document.getElementById('internetWarning').style.display = 'none';
+    }, 3000);
+  }
+}
+
+window.addEventListener('online', () => console.log('✅ Back online'));
+window.addEventListener('offline', checkInternetSpeed);
+setInterval(checkInternetSpeed, 10000);
+
+// ============ COMING SOON MODAL ============
+function showComingSoon(){
+  document.getElementById('comingSoonModal').classList.add('show');
+}
+
+function closeComingSoon(){
+  document.getElementById('comingSoonModal').classList.remove('show');
+}
+
+function resetData(){
+  showComingSoon();
+}
+
+// ============ EDIT NAME MODAL ============
+function openEditNameModal(){
+  let displayName = currentUser?.displayName || 'User';
+  let defaultUserNum = getDefaultUserNumber();
+  
+  document.getElementById('editNameInput').value = displayName !== `User ${defaultUserNum}` ? displayName : '';
+  
+  let costLabel = document.getElementById('editNameCostLabel');
+  let costDisplay = document.getElementById('editNameCostDisplay');
+  
+  if(nameChangeCount === 0){
+    costLabel.innerText = '✨ First time: 10 XP (Default → Your Name)';
+    costDisplay.innerText = '⚡ Cost: 10 XP';
+  } else {
+    costLabel.innerText = `🔄 Name change #${nameChangeCount + 1}: 800 XP`;
+    costDisplay.innerText = '⚡ Cost: 800 XP';
+  }
+  
+  document.getElementById('editNameModal').classList.add('show');
+}
+
+function closeEditNameModal(){
+  document.getElementById('editNameModal').classList.remove('show');
+}
+
+function confirmEditName(){
+  let newName = document.getElementById('editNameInput').value.trim();
+  
+  if(!newName){
+    showToast('❌ Please enter a name', 'error');
+    return;
+  }
+  
+  let requiredXP = nameChangeCount === 0 ? 10 : 800;
+  
+  if(points < requiredXP){
+    showToast(`❌ Need ${requiredXP} XP! You have ${points}`, 'error');
+    return;
+  }
+  
+  points -= requiredXP;
+  nameChangeCount++;
+  
+  auth.currentUser.updateProfile({
+    displayName: newName
+  }).then(() => {
+    saveDataToFirestore();
+    closeEditNameModal();
+    updateProfile();
+    if(nameChangeCount === 1){
+      showToast(`✅ Name changed to "${newName}"! (10 XP spent)`);
+    } else {
+      showToast(`✅ Name changed to "${newName}"! (800 XP spent)`);
+    }
+    loadFeed();
+  }).catch(err => {
+    showToast('❌ Failed to update name', 'error');
+  });
+}
+
+// ============ SIGNUP / LOGIN SCREEN SWITCHING ============
+function showLoginScreen(){
+  document.getElementById('signupScreen').classList.remove('show');
+  document.getElementById('loginScreen').classList.add('show');
+}
+
+function showSignupScreenFromLogin(){
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('signupScreen').classList.add('show');
+}
+
+// ============ LOGIN HANDLER ============
+async function handleLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const msgDiv = document.getElementById('loginMessage');
+  const btn = document.getElementById('loginBtn');
+
+  if(!email || !password){
+    showSignupMessage('❌ Please fill all fields', 'error', msgDiv);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Logging in...';
+
+  try {
+    const userCredential = await auth.signInWithEmailAndPassword(email, password);
+    currentUser = userCredential.user;
+    document.getElementById('loginScreen').classList.remove('show');
+    completeLogin();
+  } catch(error){
+    let errMsg = '❌ Login failed';
+    if(error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential'){
+      errMsg = '❌ Invalid email or password';
+    } else if(error.code === 'auth/wrong-password'){
+      errMsg = '❌ Wrong password';
+    } else if(error.code === 'auth/invalid-email'){
+      errMsg = '❌ Invalid email format';
+    } else if(error.code === 'auth/too-many-requests'){
+      errMsg = '❌ Too many attempts. Try again later';
+    }
+    showSignupMessage(errMsg, 'error', msgDiv);
+    btn.disabled = false;
+    btn.textContent = '🔓 LOGIN';
+  }
+}
+
+// ============ SIGNUP HANDLER ============
+async function handleSignup() {
+  const email = document.getElementById('signupEmail').value.trim();
+  const password = document.getElementById('signupPassword').value.trim();
+  const msgDiv = document.getElementById('signupMessage');
+  const btn = document.getElementById('signupBtn');
+
+  if (!email || !password) {
+    showSignupMessage('❌ Please fill all fields', 'error', msgDiv);
+    return;
+  }
+
+  if (password.length < 8) {
+    showSignupMessage('❌ Password must be 8+ characters', 'error', msgDiv);
+    return;
+  }
+
+  if (!/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+    showSignupMessage('❌ Use uppercase letters & numbers', 'error', msgDiv);
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Creating account...';
+
+  try {
+    const usersSnapshot = await db.collection('users').get();
+    let totalUsers = usersSnapshot.size;
+    let defaultUserName = `User ${totalUsers + 1}`;
+
+    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+    const user = userCredential.user;
+
+    await user.updateProfile({
+      displayName: defaultUserName
+    });
+
+    await db.collection('users').doc(user.uid).set({
+      uid: user.uid,
+      email: email,
+      displayName: defaultUserName,
+      createdAt: new Date().toISOString(),
+      points: 0,
+      xp: 0,
+      banned: false,
+      plan: 'free',
+      planExpiry: 0,
+      credits: 0,
+      videos: [],
+      subscription: {},
+      myComments: [],
+      nameChangeCount: 0,
+      dismissedNotifications: {},
+      completedSocialTasks: {}
+    });
+
+    showSignupMessage(`✅ Account created as "${defaultUserName}"!`, 'success', msgDiv);
+
+    setTimeout(() => {
+      currentUser = user;
+      completeLogin();
+    }, 1500);
+
+  } catch (error) {
+    let errMsg = '❌ Signup failed';
+    if (error.code === 'auth/email-already-in-use') {
+      errMsg = '❌ Email already registered';
+    } else if (error.code === 'auth/invalid-email') {
+      errMsg = '❌ Invalid email format';
+    } else if (error.code === 'auth/weak-password') {
+      errMsg = '❌ Password too weak';
+    }
+    showSignupMessage(errMsg, 'error', msgDiv);
+    btn.disabled = false;
+    btn.textContent = '✨ CREATE ACCOUNT';
+  }
+}
+
+function showSignupMessage(msg, type, element) {
+  element.className = type === 'error' ? 'signup-error' : 'signup-success';
+  element.textContent = msg;
+  element.style.display = 'block';
+  if (type === 'error') {
+    setTimeout(() => { element.style.display = 'none'; }, 3000);
+  }
+}
+
+function completeLogin() {
+  document.getElementById('signupScreen').classList.remove('show');
+  document.getElementById('loginScreen').classList.remove('show');
+  document.getElementById('headerBar').style.display = 'flex';
+  document.getElementById('navBar').style.display = 'flex';
+  document.getElementById('bottomNav').style.display = 'flex';
+
+  syncFixedLayout();
+  initApp();
+  initAdPanel();
+  startBanListener();
+  loadNotifications();
+  loadUPIFromFirestore();
+  startUPIListener();
+}
+
+// ============ ADMIN BAN SYNC (NO DATA DELETE) ============
+function startBanListener(){
+  if(!firebaseReady || !currentUser || !db) return;
+  db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+    if(!doc.exists) return;
+    const data = doc.data();
+    if(data.banned === true && !isBanned){
+      isBanned = true;
+      deleteUserDataAndShowBanned();
+    }
+  });
+}
+
+async function deleteUserDataAndShowBanned(){
+  console.log('🚫 User banned - showing banned screen (no data deleted)');
+  showBannedScreen();
+  if(auth) auth.signOut();
+}
+
+function showBannedScreen(){
+  document.getElementById('headerBar').style.display = 'none';
+  document.getElementById('navBar').style.display = 'none';
+  document.getElementById('bottomNav').style.display = 'none';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('bannedScreen').classList.add('show');
+}
+
+// ============ LOADING & INITIALIZATION ============
+function startLoadingScreen() {
+  const loadingScreen = document.getElementById('loadingScreen');
+  const progressBar = document.getElementById('progressBar');
+  let progress = 0;
+
+  const interval = setInterval(() => {
+    progress += Math.random() * 25;
+    if (progress > 90) progress = 90;
+    progressBar.style.width = progress + '%';
+  }, 200);
+
+  setTimeout(() => {
+    clearInterval(interval);
+    progressBar.style.width = '100%';
+    
+    setTimeout(() => {
+      loadingScreen.style.display = 'none';
+      
+      if (firebaseReady && auth) {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            currentUser = user;
+            completeLogin();
+          } else {
+            showSignupScreen();
+          }
+        });
+      } else {
+        showSignupScreen();
+      }
+    }, 500);
+  }, 2000);
+}
+
+function showSignupScreen() {
+  document.getElementById('signupScreen').classList.add('show');
+}
+
+window.addEventListener('load', startLoadingScreen);
+
+// ============ MAIN APP DATA ============
+let points = 0;
+let plan = 'free';
+let planExpiry = 0;
+let credits = 0;
+let myVideos = [];
+let allVideos = [];
+let dailyXP = {};
+let selectedPlan = 'daily';
+let isManualClick = false;
+let selectedCategory = 'All';
+let selectedPlanTab = 'All';
+let feedbackClaimed = {};
+let subscription = {};
+let currentPaymentPlan = '';
+let currentPaymentAmount = 0;
+let extraUploads = {};
+let myComments = [];
+let taskLinkShown = {};
+let taskCopiedAt = {};
+let nameChangeCount = 0;
+let isBanned = false;
+let completedSocialTasks = {};
+
+const categories = ['All', 'Gaming', 'Vlog', 'Education', 'Music', 'Comedy', 'Tech', 'Lifestyle', 'Other'];
+const planTabs = [
+  {key:'All', label:'All'},
+  {key:'free', label:'Free'},
+  {key:'daily', label:'Daily Plan'},
+  {key:'weekly', label:'Weekly Plan'},
+  {key:'monthly', label:'Monthly Plan'}
+];
+
+const planData = {
+  free: {price:0, days:0, credits:0, name:"Free", xp:10, maxUsers:10, badge:"FREE", badgeClass:"badge-free"},
+  daily: {price:5, days:1, credits:5, name:"Daily", xp:20, maxUsers:50, badge:"Daily plan", badgeClass:"badge-daily"},
+  weekly: {price:150, days:7, credits:20, name:"Weekly", xp:30, maxUsers:200, badge:"PRO", badgeClass:"badge-pro"},
+  monthly: {price:700, days:1, credits:30, name:"Monthly", xp:50, maxUsers:500, badge:"VIP ✨", badgeClass:"badge-vip", unlimited: true, maxXP: 50000}
+}
+const planOrder = ['daily', 'weekly', 'monthly'];
+
+const planVideoDurationMs = {
+  free: 24 * 60 * 60 * 1000,
+  daily: 24 * 60 * 60 * 1000,
+  weekly: 7 * 24 * 60 * 60 * 1000,
+  monthly: 24 * 60 * 60 * 1000
+};
+
+const EXTRA_UPLOAD_XP_COST = 500;
+const TRANSCRIPT_XP_COST = 50;
+const BOOST_XP_COST = 500;
+const BOOST_BONUS_PERCENT = 40;
+const TASK_TIMER_SECONDS = 5 * 60;
+
+// ============ SOCIAL TASKS (ONE-TIME 250 XP EACH) ============
+// ⚠️ Replace the "link" values below with your real channel/group/profile URLs
+const socialTasks = [
+  {id:'join_zexify_channel', icon:'📢', label:'Join Zexify official channel', link:'https://t.me/ZexifyOfficial', xp:250},
+  {id:'join_growx_channel', icon:'📢', label:'Join GrowX official channel', link:'https://t.me/GrowXOfficial', xp:250},
+  {id:'join_growx_group', icon:'👥', label:'Join GrowX promotion group', link:'https://t.me/GrowXPromotionGroup', xp:250},
+  {id:'sub_sellapp_yt', icon:'▶️', label:'Subscribe Sell App channel (YouTube)', link:'https://youtube.com/@SellApp', xp:250},
+  {id:'sub_zexify_yt', icon:'▶️', label:'Subscribe Zexify official channel (YouTube)', link:'https://youtube.com/@ZexifyOfficial', xp:250},
+  {id:'follow_growx_insta', icon:'📸', label:'Follow on Instagram - GrowX official', link:'https://instagram.com/growxofficial', xp:250}
+];
+
+// ============ HELPER FUNCTIONS ============
+function getDefaultUserNumber(){
+  if(!currentUser) return 0;
+  return (currentUser.metadata.creationTime.getTime() % 1000) + 1;
+}
+
+// ============ FIRESTORE OPERATIONS ============
+async function saveDataToFirestore(){
+  if (!firebaseReady || !currentUser || !db) return;
+
+  try {
+    await db.collection('users').doc(currentUser.uid).update({
+      xp: points,
+      points: points,
+      plan: plan,
+      planExpiry: planExpiry,
+      credits: credits,
+      videos: myVideos,
+      subscription: subscription,
+      myComments: myComments,
+      dailyXP: dailyXP,
+      nameChangeCount: nameChangeCount,
+      dismissedNotifications: dismissedNotifications,
+      completedSocialTasks: completedSocialTasks,
+      lastUpdated: new Date().toISOString()
+    });
+    console.log('✅ Firestore updated');
+  } catch (err) {
+    console.log('⚠️ Firestore error:', err.message);
+  }
+}
+
+async function loadDataFromFirestore(){
+  if (!firebaseReady || !currentUser || !db) return;
+
+  try {
+    const doc = await db.collection('users').doc(currentUser.uid).get();
+    if (doc.exists) {
+      const data = doc.data();
+      points = (data.xp !== undefined ? data.xp : data.points) || 0;
+      plan = data.plan || 'free';
+      planExpiry = data.planExpiry || 0;
+      credits = data.credits || 0;
+      myVideos = data.videos || [];
+      subscription = data.subscription || {};
+      myComments = data.myComments || [];
+      dailyXP = data.dailyXP || {};
+      nameChangeCount = data.nameChangeCount || 0;
+      isBanned = data.banned === true;
+      dismissedNotifications = data.dismissedNotifications || {};
+      completedSocialTasks = data.completedSocialTasks || {};
+      console.log('✅ Data loaded from Firestore');
+    }
+  } catch (err) {
+    console.log('⚠️ Load error:', err.message);
+  }
+}
+
+async function loadAllVideos(){
+  if(!firebaseReady || !db) return;
+
+  try {
+    const snapshot = await db.collection('videos')
+      .orderBy('uploadedAt', 'desc')
+      .get();
+
+    allVideos = [];
+
+    snapshot.forEach(doc => {
+      let video = doc.data();
+      // Clean expired videos
+      if(video.expiresAt && Date.now() > video.expiresAt){
+        video.removed = true;
+      }
+      allVideos.push({
+        firestoreId: doc.id,
+        ...video
+      });
+    });
+
+    console.log('✅ Global videos loaded:', allVideos.length);
+
+    loadCategoryFilter();
+    loadPlanFilter();
+    loadFeed();
+
+  } catch(err) {
+    console.error('❌ Global videos load error:', err);
+  }
+}
+
+async function initApp(){
+  await loadDataFromFirestore();
+
+  if(isBanned){
+    showBannedScreen();
+    return;
+  }
+
+  await loadAllVideos();
+  
+  let userEmail = currentUser?.email || 'user@example.com';
+  let userName = currentUser?.displayName || 'Creator';
+  
+  document.getElementById('userEmail').innerText = userEmail.split('@')[0];
+  document.getElementById('yourEmail').innerText = userEmail;
+  document.getElementById('name').innerText = userName;
+
+  removeExpiredVideos();
+  loadCategoryFilter();
+  loadPlanFilter();
+  loadFeed();
+  updateProfile();
+}
+
+function syncFixedLayout(){
+  const header = document.querySelector('.header');
+  const nav = document.querySelector('.nav');
+  if(!header || !nav) return;
+  const headerH = header.offsetHeight;
+  nav.style.top = headerH + 'px';
+  const totalH = headerH + nav.offsetHeight;
+  document.body.style.paddingTop = totalH + 'px';
+}
+
+window.addEventListener('load', syncFixedLayout);
+window.addEventListener('resize', syncFixedLayout);
+setTimeout(syncFixedLayout, 500);
+
+function showToast(message, type = 'success'){
+  let toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+function showPage(id, btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(id=='feed') { removeExpiredVideos(); loadAllVideos(); }
+  if(id=='profile') updateProfile();
+  if(id=='upload') updateUploadLimit();
+  if(id=='analytics') loadAnalytics();
+  if(id=='pro') { setTimeout(initScrollSync, 100);}
+  syncFixedLayout();
+  window.scrollTo(0, 0);
+}
+
+function showBottomPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bottom-nav-item').forEach(b => b.classList.remove('active-bottom'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+
+  const targetPage = document.getElementById(id);
+  if (targetPage) {
+    targetPage.classList.add('active');
+  }
+
+  if (id === 'feed' || id === 'home') {
+    const homeNav = document.querySelector('.bottom-nav-item:nth-child(1)');
+    if(homeNav) homeNav.classList.add('active-bottom');
+    removeExpiredVideos();
+    loadCategoryFilter();
+    loadPlanFilter();
+    loadAllVideos();
+  }
+  else if (id === 'analytics') {
+    const analyticsNav = document.querySelector('.bottom-nav-item:nth-child(2)');
+    if(analyticsNav) analyticsNav.classList.add('active-bottom');
+    loadAnalytics();
+  }
+  else if (id === 'upload') {
+    updateUploadLimit();
+  }
+  else if (id === 'tools') {
+    const toolsNav = document.querySelector('.bottom-nav-item:nth-child(4)');
+    if(toolsNav) toolsNav.classList.add('active-bottom');
+  }
+  else if (id === 'profile') {
+    const profileNav = document.querySelector('.bottom-nav-item:nth-child(5)');
+    if(profileNav) profileNav.classList.add('active-bottom');
+    updateProfile();
+  }
+  syncFixedLayout();
+  window.scrollTo(0, 0);
+}
+
+function loadCategoryFilter(){
+  let html = '';
+  categories.forEach(cat => {
+    let active = cat === selectedCategory ? 'active' : '';
+    html += `<button class="cat-btn ${active}" onclick="selectedCategory='${cat}'; loadCategoryFilter(); loadFeed()">${cat}</button>`;
+  });
+  document.getElementById('categoryFilter').innerHTML = html;
+}
+
+function loadPlanFilter(){
+  let html = '';
+  planTabs.forEach(t => {
+    let active = t.key === selectedPlanTab ? 'active' : '';
+    html += `<button class="plan-tab-btn ${active}" onclick="selectedPlanTab='${t.key}'; loadPlanFilter(); loadFeed()">${t.label}</button>`;
+  });
+  document.getElementById('planFilter').innerHTML = html;
+}
+
+function updateActiveTab(type){
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  let targetTab = document.getElementById(`tab-${type}`);
+  if(targetTab) targetTab.classList.add('active');
+
+  document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('active-card'));
+  let targetCard = document.getElementById(`card-${type}`);
+  if(targetCard) targetCard.classList.add('active-card');
+}
+
+// ============ DAILY PLAN TIER SELECTION ============
+let selectedDailyTier = 'free';
+let dailyTierData = {
+  free: {
+    name: 'Free',
+    price: 0,
+    color: '#00D9FF',
+    colorLight: 'rgba(0,217,255,0.12)',
+    label: 'FREE PLAN FEATURES',
+    features: [
+      '✓ Max User Views — <b>10 Users Limit</b>',
+      '✓ Video Upload — <b>3</b>',
+      '✓ Max XP earning limit — <b>5,000 XP</b>',
+      '✓ Free Badge on Videos',
+      '✓ 10 xp on your Videos',
+      '✓ 🕒 24 hours active'
+    ]
+  },
+  basic: {
+    name: 'Basic',
+    price: 5,
+    color: '#00FF88',
+    colorLight: 'rgba(0,255,136,0.12)',
+    label: 'BASIC PLAN FEATURES',
+    features: [
+      '✓ Max User Views — <b>50 Users Limit</b>',
+      '✓ Video Upload — <b>15</b>',
+      '✓ Max XP earning limit — <b>10,000 XP</b>',
+      '✓ Basic Badge on Videos',
+      '✓ 20 xp on your Videos',
+      '✓ 🕒 24 hours active'
+    ]
+  },
+  gold: {
+    name: 'Gold',
+    price: 30,
+    color: '#FFD700',
+    colorLight: 'rgba(255,215,0,0.12)',
+    label: 'GOLD PLAN FEATURES',
+    features: [
+      '✓ Max User Views — <b>500 Users Limit</b>',
+      '✓ Video Upload — <b>Unlimited (100+)</b>',
+      '✓ Max XP earning limit — <b>200,000 XP</b>',
+      '✓ 🏆 Gold Badge on Videos',
+      '✓ 50 xp on your Videos',
+      '✓ 🕒 24 hours active'
+    ]
+  },
+  premium: {
+    name: 'Premium',
+    price: 50,
+    color: '#DD33FA',
+    colorLight: 'rgba(221,51,250,0.12)',
+    label: 'PREMIUM PLAN FEATURES',
+    features: [
+      '✓ Max User Views — <b>Unlimited</b>',
+      '✓ Video Upload — <b>Unlimited (500+)</b>',
+      '✓ Max XP earning limit — <b>100,000 XP</b>',
+      '✓ 👑 Premium Badge on Videos',
+      '✓ 100 xp on your Videos',
+      '✓ 🕒 24 hours active'
+    ]
+  }
+};
+
+function selectDailyTier(tier, element){
+  selectedDailyTier = tier;
+  let tierInfo = dailyTierData[tier];
+  
+  // Remove selected class from all
+  document.querySelectorAll('.daily-price-option').forEach(el => {
+    el.classList.remove('selected');
+    el.style.borderColor = '';
+    el.style.background = '';
+    el.style.boxShadow = '';
+  });
+  
+  // Add selected class to clicked with dynamic colors
+  element.classList.add('selected');
+  element.style.borderColor = tierInfo.color;
+  element.style.background = tierInfo.colorLight;
+  element.style.boxShadow = `0 0 18px ${tierInfo.color}40`;
+  
+  // Update features
+  updateDailyFeatures(tier);
+  
+  // Update button with tier color
+  let btnText = tier === 'free' ? 'Get Free Plan' : `Get ${dailyTierData[tier].name} Plan • ₹${dailyTierData[tier].price}`;
+  let dailyBuyBtn = document.getElementById('dailyBuyBtn');
+  dailyBuyBtn.textContent = btnText;
+  dailyBuyBtn.style.background = `linear-gradient(90deg, ${tierInfo.color}, ${tierInfo.color}dd)`;
+  dailyBuyBtn.style.color = tier === 'gold' || tier === 'free' ? '#000' : '#000';
+}
+
+function updateDailyFeatures(tier){
+  let tierInfo = dailyTierData[tier];
+  let html = `<p><b style="color:${tierInfo.color}">⭐ ${tierInfo.label}</b></p>`;
+  tierInfo.features.forEach(feature => {
+    let featureWithColor = feature.replace(/✓/g, `<span style="color:${tierInfo.color}">✓</span>`);
+    html += `<p style="color:var(--text)">${featureWithColor}</p>`;
+  });
+  
+  let dailyFeaturesDiv = document.getElementById('dailyFeatures');
+  dailyFeaturesDiv.innerHTML = html;
+  dailyFeaturesDiv.style.borderTopColor = tierInfo.color + '40';
+}
+
+function buySelectedDailyTier(){
+  if(selectedDailyTier === 'free'){
+    showToast('✅ Free plan is always available!');
+    return;
+  }
+  
+  let tierInfo = dailyTierData[selectedDailyTier];
+  let planType = selectedDailyTier === 'basic' ? 'daily' : selectedDailyTier;
+  buyPlan(planType, tierInfo.price);
+}
+
+function selectPlan(type){
+  selectedPlan = type;
+  isManualClick = true;
+  updateActiveTab(type);
+
+  const scroll = document.getElementById('plansScroll');
+  const card = document.getElementById(`card-${type}`);
+  if(scroll && card){
+    const scrollPos = card.offsetLeft - scroll.offsetLeft - 20;
+    scroll.scrollTo({left: scrollPos, behavior: 'smooth'});
+  }
+  setTimeout(() => { isManualClick = false; }, 600);
+}
+
+// Initialize Daily Tier Colors
+function initDailyTierColors(){
+  let freeElement = document.getElementById('daily-free');
+  let tierInfo = dailyTierData['free'];
+  
+  if(freeElement && tierInfo){
+    freeElement.classList.add('selected');
+    freeElement.style.borderColor = tierInfo.color;
+    freeElement.style.background = tierInfo.colorLight;
+    freeElement.style.boxShadow = `0 0 18px ${tierInfo.color}40`;
+    updateDailyFeatures('free');
+  }
+}
+
+function initScrollSync(){
+  const scroll = document.getElementById('plansScroll');
+  if(!scroll) return;
+  
+  // Initialize daily tier colors
+  initDailyTierColors();
+  
+  updateActiveTab(selectedPlan);
+  
+  scroll.addEventListener('scroll', () => {
+    if(isManualClick) return;
+    
+    let closestCard = null;
+    let closestDistance = Infinity;
+    
+    document.querySelectorAll('.plan-card').forEach(card => {
+      const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+      const scrollCenter = scroll.scrollLeft + scroll.offsetWidth / 2;
+      const distance = Math.abs(cardCenter - scrollCenter);
+      
+      if(distance < closestDistance){
+        closestDistance = distance;
+        closestCard = card;
+      }
+    });
+    
+    if(closestCard){
+      const cardId = closestCard.id;
+      const planType = cardId.replace('card-', '');
+      selectedPlan = planType;
+      updateActiveTab(planType);
+    }
+  });
+}
+
+function canPurchasePlan(){
+  if(plan !== 'free' && Date.now() < planExpiry){
+    return {
+      allowed: false,
+      message: `❌ You already have an active ${plan.toUpperCase()} plan! Wait until it expires.`
+    };
+  }
+
+  if(subscription.status === 'pending'){
+    return {
+      allowed: false,
+      message: `⏳ You have a PENDING subscription (${subscription.plan} Plan). Wait for admin verification.`
+    };
+  }
+
+  return {allowed: true, message: 'OK'};
+}
+
+function buyPlan(planType, amount){
+  let canBuy = canPurchasePlan();
+  if(!canBuy.allowed){
+    showToast(canBuy.message, 'error');
+    return;
+  }
+
+  currentPaymentPlan = planType;
+  currentPaymentAmount = amount;
+  let planNames = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly'};
+  let validity = {daily: '24 Hours', weekly: '7 Days', monthly: '24 Hours'};
+
+  document.getElementById('paymentAmount').innerText = '₹' + amount;
+  document.getElementById('paymentPlan').innerText = planNames[planType] + ' Plan';
+  document.getElementById('paymentValidity').innerText = validity[planType] + ' Validity';
+
+  // ✅ LOAD UPI FROM FIRESTORE (SYNCED WITH ADMIN)
+  document.getElementById('upiDisplay').innerText = adminUPI;
+
+  showPage('payment', null);
+}
+
+function copyUPI(){
+  let upiText = document.getElementById('upiDisplay').textContent;
+  simpleCopy(upiText, '✅ UPI ID copied!');
+}
+
+function copyHashtags(){
+  let hashtagText = document.getElementById('hashOutput').textContent;
+  simpleCopy(hashtagText, '✅ Hashtags copied!');
+}
+
+function simpleCopy(text, successMsg){
+  let temp = document.createElement('textarea');
+  temp.value = text;
+  temp.style.position = 'fixed';
+  temp.style.opacity = '0';
+  document.body.appendChild(temp);
+  temp.select();
+  
+  try {
+    document.execCommand('copy');
+    showToast(successMsg || '✅ Copied!');
+  } catch(err) {
+    showToast('❌ Could not copy. Try again', 'error');
+  }
+  
+  document.body.removeChild(temp);
+}
+
+function copyTaskLinkDirect(i, videoId){
+  let link = `https://www.youtube.com/watch?v=${videoId}`;
+  let temp = document.createElement('textarea');
+  temp.value = link;
+  temp.style.position = 'fixed';
+  temp.style.opacity = '0';
+  document.body.appendChild(temp);
+  temp.select();
+  
+  try {
+    document.execCommand('copy');
+    taskCopiedAt[i] = Date.now();
+    delete taskLinkShown[i];
+    saveDataToFirestore();
+    showToast('✅ Link copied! 5 minute timer started');
+    loadFeed();
+  } catch(err) {
+    showToast('❌ Could not copy. Try again', 'error');
+  }
+  
+  document.body.removeChild(temp);
+}
+
+function submitPayment(){
+  let reference = document.getElementById('referenceInput').value.trim();
+  if(!reference){
+    showToast('❌ Please enter Reference Number (UTR)', 'error');
+    return;
+  }
+
+  subscription = {
+    plan: currentPaymentPlan,
+    amount: currentPaymentAmount,
+    referenceNumber: reference,
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+    paymentId: 'PAY_' + Date.now(),
+    userId: currentUser.uid,
+    userName: currentUser.displayName || 'Anonymous',
+    userEmail: currentUser.email
+  };
+
+  // ⭐ SAVE TO PAYMENTS COLLECTION FOR ADMIN DASHBOARD
+  if(firebaseReady && db && currentUser){
+    db.collection('payments').add(subscription).then((docRef) => {
+      console.log('✅ Payment saved to payments collection with ID:', docRef.id);
+      showToast('✅ Payment submitted! Verification within 1-3 hours');
+    }).catch((error) => {
+      console.error('❌ Error saving to payments:', error);
+      showToast('⚠️ Saved to profile but admin sync pending...', 'error');
+    });
+  }
+
+  saveDataToFirestore();
+
+  updateProfile();
+  showPage('feed', null);
+  document.getElementById('referenceInput').value = '';
+}
+
+function backToPlans(){
+  showPage('pro', null);
+}
+
+function getVideoID(url){
+  let regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+  let match = url.match(regExp);
+  return (match&&match[7].length==11)? match[7] : false;
+}
+
+function formatTime(totalSeconds){
+  if(totalSeconds < 0) totalSeconds = 0;
+  let m = Math.floor(totalSeconds / 60);
+  let s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function startTask(i){
+  taskLinkShown[i] = true;
+  saveDataToFirestore();
+  loadFeed();
+}
+
+function validateYouTubeComment(commentText){
+  if(!commentText.includes('[') || !commentText.includes(']')) return false;
+  if(!commentText.includes('=GrowX]')) return false;
+  let trimmed = commentText.trim();
+  if(!trimmed.startsWith('[') || !trimmed.endsWith(']')) return false;
+  return true;
+}
+
+function getTaskSectionHtml(i, v, isClaimed, isTaskCompleted){
+  if(isClaimed){
+    return `<div style="background:rgba(255,215,0,0.1);padding:12px;border-radius:8px;text-align:center;color:#FFD700;font-weight:600">
+      ⏳ Comment submitted - waiting for admin approval
+    </div>`;
+  }
+
+  if(isTaskCompleted){
+    return `<div style="background:rgba(255,46,99,0.1);padding:12px;border-radius:8px;text-align:center;color:var(--danger);font-weight:600">
+      ❌ Video view limit reached
+    </div>`;
+  }
+
+  let copiedAt = taskCopiedAt[i];
+  if(copiedAt){
+    let elapsedSec = (Date.now() - copiedAt) / 1000;
+    let remaining = TASK_TIMER_SECONDS - elapsedSec;
+
+    if(remaining > 0){
+      return `<div class="verification-input-box" style="text-align:center">
+        <div style="color:var(--accent2);font-weight:700;font-size:13px;margin-bottom:8px">⏱️ Go to YouTube and post your comment</div>
+        <div id="taskTimer_${i}" style="font-family:'Orbitron';font-size:30px;color:var(--accent);margin-bottom:8px">${formatTime(remaining)}</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">
+          Comment in exact format:<br>
+          <b style="color:var(--accent)">[{Your comment} =GrowX]</b><br>
+          When timer ends, paste comment here
+        </div>
+      </div>`;
+    } else {
+      return `<div class="verification-input-box">
+        <label class="payment-label">✅ Timer done! Paste your YouTube comment here:</label>
+        <textarea class="verification-input" id="comment_${i}" placeholder='[{Your comment} =GrowX]'></textarea>
+        <button class="verification-btn" onclick="submitYouTubeCommentVerification(${i})">✅ Submit & Verify</button>
+      </div>`;
+    }
+  }
+
+ if(taskLinkShown[i]){
+    return `<div class="verification-input-box">
+      <label class="payment-label">📺 Video Link (Copy & open in YouTube):</label>
+      <input type="text" class="copy-link-input" readonly value="https://www.youtube.com/watch?v=${v.id}">
+      <button class="verification-btn" onclick="copyTaskLinkDirect(${i}, '${v.id}')">📋 Copy Link & Start 5-Min Timer</button>
+      <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.7">
+        1️⃣ Copy the link above<br>
+        2️⃣ Open it in YouTube or browser<br>
+        3️⃣ Post a comment using this <b>exact format</b>:<br>
+        &nbsp;&nbsp;<b style="color:var(--accent)">[{Your Comment} =GrowX]</b><br>
+        4️⃣ You have <b>5 minutes</b> to complete the task!
+      </div>
+    </div>`;
+  }
+
+  return `<div class="task-section">
+    <button class="task-button" onclick="startTask(${i})">▶️ Start Task</button>
+  </div>`;
+}
+
+
+  function submitYouTubeCommentVerification(videoIndex){
+  if(videoIndex < 0 || videoIndex >= allVideos.length) return;
+
+  let commentBox = document.getElementById(`comment_${videoIndex}`);
+  if(!commentBox) return;
+  let pastedComment = commentBox.value.trim();
+
+  if(!pastedComment){
+    showToast('❌ Please paste your comment!', 'error');
+    return;
+  }
+
+  if(!validateYouTubeComment(pastedComment)){
+    showToast(`❌ Invalid format! Use: [{comment} =GrowX]`, 'error');
+    return;
+  }
+
+  if(feedbackClaimed[videoIndex]){
+    showToast('❌ Already submitted!', 'error');
+    return;
+  }
+
+  let currentVid = allVideos[videoIndex];
+  let currentComments = currentVid.comments ? currentVid.comments.length : 0;
+  let maxLimit = currentVid.maxUsers || 10;
+
+  if(currentComments >= maxLimit){
+    showToast('❌ Video view limit reached!', 'error');
+    return;
+  }
+
+  feedbackClaimed[videoIndex] = true;
+  delete taskCopiedAt[videoIndex];
+  delete taskLinkShown[videoIndex];
+
+  let commentEntry = {
+    email: currentUser.email,
+    comment: pastedComment,
+    submittedAt: new Date().toISOString(),
+    status: 'pending',
+    xp: currentVid.xp || 10
+  };
+
+  if(!currentVid.comments) currentVid.comments = [];
+  currentVid.comments.push(commentEntry);
+
+  let ownedVid = myVideos.find(v => v.id === currentVid.id && v.uploadedAt === currentVid.uploadedAt && v.title === currentVid.title);
+  if(ownedVid){
+    if(!ownedVid.comments) ownedVid.comments = [];
+    ownedVid.comments.push(commentEntry);
+  }
+
+  myComments.push({
+    videoIndex: videoIndex,
+    videoId: currentVid.id,
+    videoTitle: currentVid.title,
+    comment: pastedComment,
+    submittedAt: commentEntry.submittedAt,
+    status: 'pending',
+    xp: commentEntry.xp
+  });
+
+  saveDataToFirestore();
+  showToast('✅ Comment submitted! Waiting for admin approval');
+  loadFeed();
+}
+
+function loadFeed(){
+  let html='';
+
+  let filteredVideos = allVideos.filter(v => {
+    let catMatch = selectedCategory === 'All' || v.category === selectedCategory;
+    let planMatch = selectedPlanTab === 'All' || (v.plan || 'free') === selectedPlanTab;
+    let notExpired = !v.expiresAt || Date.now() < v.expiresAt;
+    return catMatch && planMatch && !v.removed && notExpired;
+  });
+
+  filteredVideos.sort((a,b) => (a.uploadedAt||0) - (b.uploadedAt||0));
+
+  let priorityVideos = filteredVideos.filter(v => v.isPriority);
+  let normalVideos = filteredVideos.filter(v => !v.isPriority);
+  filteredVideos = [...priorityVideos, ...normalVideos];
+
+  if(filteredVideos.length === 0){
+    html = `<div class="empty-feed-msg">No videos found.</div>`;
+  } else {
+    filteredVideos.forEach((v)=>{
+      let i = allVideos.indexOf(v);
+      let uploaderName = v.by || "Creator";
+      let uploaderInitial = uploaderName.substring(0, 2).toUpperCase();
+      let uploaderPlan = v.plan || (v.isPro ? 'daily' : 'free');
+      let badgeInfo = planData[uploaderPlan] || planData['free'];
+
+      let proTag = `<span class="badge-pill ${badgeInfo.badgeClass}">${badgeInfo.badge}</span>`;
+      let catTag = `<span class="badge-pill category-badge">${v.category || 'General'}</span>`;
+      let videoXP = v.xp || 10;
+      let xpTag = `<span class="badge-pill xp-badge">⚡ +${videoXP} XP</span>`;
+      let priorityTag = v.isPriority ? `<span class="badge-pill priority-badge">🔥 PRIORITY</span>` : '';
+
+      let isClaimed = feedbackClaimed[i] ? true : false;
+
+      let currentComments = v.comments ? v.comments.length : 0;
+      let maxLimit = v.maxUsers || 10;
+      let leftCount = maxLimit - currentComments;
+      if(leftCount < 0) leftCount = 0;
+      let percent = Math.min(100, Math.round((currentComments / maxLimit) * 100));
+      let isTaskCompleted = currentComments >= maxLimit;
+      let boostNote = (v.isPriority && v.boostBonusViews) ? `<div style="font-size:11px;color:#FFD700;margin-top:-2px;margin-bottom:4px">🔥 Boosted: +${v.boostBonusViews} extra views added (40% bonus)</div>` : '';
+
+      let coverHtml = '';
+      if(v.coverImage && v.coverImage.trim() !== ''){
+        coverHtml = `<div class="video-cover"><img src="${v.coverImage}" alt="Video cover" onerror="this.parentElement.innerHTML='<div class=\\"video-cover-placeholder\\">📸 Image not found</div>'"></div>`;
+      } else {
+        coverHtml = `<div class="video-cover"><div class="video-cover-placeholder">📸 No cover image</div></div>`;
+      }
+
+      html += `<div class="card ${v.isPriority ? 'priority-card' : ''}">
+        <div class="video-top-header">
+          <div class="uploader-info">
+            <div class="uploader-avatar">${uploaderInitial}</div>
+            <div class="uploader-details">
+              <div class="uploader-name-box">
+                <span class="uploader-name">${uploaderName}</span>
+              </div>
+            </div>
+          </div>
+          <div class="video-right-badges">
+            ${priorityTag}
+            ${proTag}
+            ${catTag}
+            ${xpTag}
+          </div>
+        </div>
+
+        ${coverHtml}
+
+        <div class="video-details-section">
+          <h4 class="video-title-text">${v.title}</h4>
+        </div>
+
+        ${boostNote}
+        <div class="progress-container">
+          <div class="progress-info">
+            <span>${currentComments}/${maxLimit} Users Viewed</span>
+            <span class="progress-left-text">${isTaskCompleted ? '<span class="completed-badge">TASK COMPLETED</span>' : leftCount + ' left'}</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" style="width: ${percent}%;"></div>
+          </div>
+        </div>
+
+        <div class="feedback-section">
+          ${getTaskSectionHtml(i, v, isClaimed, isTaskCompleted)}
+        </div>
+      </div>`;
+    });
+  }
+
+  document.getElementById('videoFeed').innerHTML = html;
+  document.getElementById('points').innerText = points;
+}
+
+setInterval(() => {
+  let feedPage = document.getElementById('feed');
+
+  if (feedPage && feedPage.classList.contains('active')) {
+    Object.keys(taskCopiedAt).forEach(i => {
+      let copiedAt = taskCopiedAt[i];
+      let elapsed = (Date.now() - copiedAt) / 1000;
+      let remaining = Math.max(0, TASK_TIMER_SECONDS - elapsed);
+
+      let timer = document.getElementById(`taskTimer_${i}`);
+
+      if (timer) {
+        timer.innerText = formatTime(remaining);
+      }
+    });
+  }
+}, 1000);
+
+setInterval(() => { removeExpiredVideos(); }, 60000);
+
+function removeExpiredVideos(){
+  let changed = false;
+  allVideos.forEach(v => {
+    if(!v.removed && v.expiresAt && Date.now() > v.expiresAt){
+      v.removed = true; changed = true;
+    }
+  });
+  myVideos.forEach(v => {
+    if(!v.removed && v.expiresAt && Date.now() > v.expiresAt){
+      v.removed = true; changed = true;
+    }
+  });
+  if(changed) saveDataToFirestore();
+}
+
+function checkAndExpireSubscription(){
+  if(plan !== 'free' && Date.now() > planExpiry){
+    plan = 'free';
+    planExpiry = 0;
+    credits = 0;
+    subscription = {};
+    saveDataToFirestore();
+  }
+}
+
+function boostVideo(index){
+  let vid = myVideos[index];
+  if(!vid){ return; }
+  if(points < BOOST_XP_COST){
+    showToast(`❌ Need ${BOOST_XP_COST} XP. You have ${points}!`, 'error');
+    return;
+  }
+  if(vid.isPriority){
+    showToast('❌ This video is already boosted!', 'error');
+    return;
+  }
+
+  let currentMax = vid.maxUsers || 10;
+  let bonusViews = Math.ceil(currentMax * (BOOST_BONUS_PERCENT / 100));
+  let newMax = currentMax + bonusViews;
+
+  if(!confirm(`Spend ${BOOST_XP_COST} XP to boost?\n\nCurrent: ${currentMax} views\n+40% Bonus: ${bonusViews} views\nTotal: ${newMax} views`)){
+    return;
+  }
+
+  points -= BOOST_XP_COST;
+
+  let target = allVideos.find(v => v.id === vid.id && v.title === vid.title && v.uploadedAt === vid.uploadedAt);
+  if(target){
+    target.isPriority = true;
+    target.boostBonusViews = bonusViews;
+    target.maxUsers = newMax;
+  }
+
+  vid.isPriority = true;
+  vid.boostBonusViews = bonusViews;
+  vid.maxUsers = newMax;
+
+  saveDataToFirestore();
+  showToast(`✅ Boost activated! New limit: ${newMax}`);
+  loadAnalytics();
+}
+
+async function submitVideo(){
+  let cat = document.getElementById('category').value;
+  if(cat === ''){ showToast('❌ Select a category', 'error'); return; }
+
+  let dailyLimit = plan==='free'? 3 : plan==='monthly' ? 999 : planData[plan].days===1?3:30;
+  let today = todayKey();
+  let extraUnlockedToday = extraUploads[today] || 0;
+  let effectiveLimit = dailyLimit + extraUnlockedToday;
+
+  if(myVideos.length >= effectiveLimit){
+    showToast('❌ Daily limit reached!', 'error');
+    updateUploadLimit();
+    return;
+  }
+
+  let link = document.getElementById('ytLink').value;
+  let vid = getVideoID(link);
+  if(!vid){ showToast('❌ Invalid YouTube link', 'error'); return; }
+  if(document.getElementById('title').value.trim() == ''){ showToast('❌ Enter a title', 'error'); return; }
+  if(document.getElementById('coverImage').value.trim() == ''){ showToast('❌ Enter image URL', 'error'); return; }
+
+  let currentXP = planData[plan].xp || 10;
+  let currentMaxUsers = planData[plan].maxUsers || 10;
+  let durationMs = planVideoDurationMs[plan] || planVideoDurationMs.free;
+
+  let newVid = {
+    id: vid,
+    title: document.getElementById('title').value,
+    by: currentUser.displayName || "Creator",
+    plan: plan,
+    isPro: plan!=='free',
+    category: cat,
+    xp: currentXP,
+    maxUsers: currentMaxUsers,
+    comments: [],
+    uploadedAt: Date.now(),
+    expiresAt: Date.now() + durationMs,
+    isPriority: false,
+    boostBonusViews: 0,
+    removed: false,
+    coverImage: document.getElementById('coverImage').value
+  };
+
+  const videoRef = await db.collection('videos').add(newVid);
+  newVid.firestoreId = videoRef.id;
+
+  allVideos.push(newVid);
+  myVideos.push(newVid);
+
+  videoUploadCounter++;
+  
+  if(videoUploadCounter % 2 === 0){
+    showAdPanel();
+  }
+
+  await saveDataToFirestore();
+
+  showToast(`✅ Video submitted! Target: ${currentMaxUsers} views`);
+  document.getElementById('category').value='';
+  document.getElementById('ytLink').value='';
+  document.getElementById('title').value='';
+  document.getElementById('coverImage').value='';
+  updateUploadLimit();
+}
+
+function todayKey(){
+  return new Date().toISOString().split('T')[0];
+}
+
+function unlockExtraUpload(){
+  if(points < EXTRA_UPLOAD_XP_COST){
+    showToast(`❌ Need ${EXTRA_UPLOAD_XP_COST} XP!`, 'error');
+    return;
+  }
+  if(!confirm(`Spend ${EXTRA_UPLOAD_XP_COST} XP to unlock 1 extra upload?`)){
+    return;
+  }
+  points -= EXTRA_UPLOAD_XP_COST;
+  let today = todayKey();
+  extraUploads[today] = (extraUploads[today] || 0) + 1;
+  saveDataToFirestore();
+  showToast("✅ Extra upload unlocked!");
+  updateUploadLimit();
+}
+
+function loadAnalytics(){
+  let last7Days = getLast7DaysXP();
+  const ctx = document.getElementById('xpChart');
+  if(window.xpChartInstance) window.xpChartInstance.destroy();
+  window.xpChartInstance = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels:last7Days.labels,
+      datasets:[{
+        label:'XP Earned',
+        data:last7Days.data,
+        borderColor:'#00FF88',
+        backgroundColor:'rgba(0,255,136,0.1)',
+        borderWidth:2,
+        fill:true,
+        tension:0.4
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:true}
+  });
+
+  let totalComments = myVideos.reduce((sum, v) => sum + (v.comments ? v.comments.length : 0), 0);
+  let avgComments = myVideos.length > 0 ? (totalComments / myVideos.length).toFixed(1) : 0;
+  document.getElementById('totalXP').innerText = points;
+  document.getElementById('totalVideosAna').innerText = myVideos.length;
+  document.getElementById('totalFeedbacksAna').innerText = totalComments;
+  document.getElementById('avgFeedback').innerText = avgComments;
+
+  let videoHtml = '';
+  if(myVideos.length === 0){
+    videoHtml = '<p style="color:var(--muted);text-align:center;padding:20px">No videos uploaded yet</p>';
+  } else {
+    myVideos.forEach((v, idx) => {
+      let commentList = v.comments || [];
+      let feedCount = commentList.length;
+      let maxLimit = v.maxUsers || 10;
+      let videoXpRate = v.xp || 10;
+      let boostBtn = v.removed
+        ? `<span style="font-size:12px;color:var(--muted)">🔥 Boost complete</span>`
+        : v.isPriority
+          ? `<span style="font-size:12px;color:#FFD700;font-weight:700">🔥 Priority — ${feedCount}/${maxLimit} complete</span>`
+          : `<button class="boost-btn" onclick="boostVideo(${idx})">🔥 Boost — ${BOOST_XP_COST} XP</button>`;
+
+      let timeLeftStr = '';
+      if(v.removed || (v.expiresAt && Date.now() > v.expiresAt)){
+        timeLeftStr = '<span style="color:var(--danger)">⛔ Expired / Removed</span>';
+      } else if(v.expiresAt){
+        let msLeft = v.expiresAt - Date.now();
+        let hrsLeft = Math.floor(msLeft / (1000*60*60));
+        let daysLeft = Math.floor(hrsLeft / 24);
+        timeLeftStr = daysLeft > 0
+          ? `<span style="color:var(--accent2)">⏳ ${daysLeft} days remaining</span>`
+          : `<span style="color:var(--accent2)">⏳ ${hrsLeft} hours remaining</span>`;
+      }
+
+      let commentsHtml = '';
+      if(feedCount === 0){
+        commentsHtml = `<div style="font-size:12px;color:var(--muted);margin-top:10px">No comments yet</div>`;
+      } else {
+        commentsHtml = `<div style="margin-top:10px">
+          <div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px">💬 Comments (${feedCount})</div>
+          ${commentList.map(c => {
+            let sc = c.status==='approved' ? 'var(--accent)' : c.status==='rejected' ? 'var(--danger)' : '#FFD700';
+            let st = c.status==='approved' ? '✅ Approved' : c.status==='rejected' ? '❌ Rejected' : '⏳ Pending';
+            return `<div style="background:rgba(0,0,0,0.25);padding:8px 10px;border-radius:6px;margin-top:6px;border-left:2px solid ${sc}">
+              <div style="font-size:12px;color:var(--text);word-break:break-word">${c.comment}</div>
+              <div style="font-size:10px;color:${sc};margin-top:3px;font-weight:600">${st}</div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
+
+      videoHtml += `<div style="padding:12px;background:rgba(0,255,136,0.05);margin-bottom:10px;border-radius:8px;border-left:3px solid var(--accent)">
+        <div style="font-weight:600;color:var(--text);margin-bottom:5px">${v.title}</div>
+        <div style="display:flex;gap:15px;font-size:13px;color:var(--muted);flex-wrap:wrap">
+          <span>👥 ${feedCount}/${maxLimit} Views</span>
+          <span>⚡ ${videoXpRate} XP per view</span>
+          <span>🏷️ ${v.category}</span>
+          <span>${timeLeftStr}</span>
+        </div>
+        <div style="margin-top:8px">${boostBtn}</div>
+        ${commentsHtml}
+      </div>`;
+    });
+  }
+  document.getElementById('videoPerformance').innerHTML = videoHtml;
+
+  let categoryData = {};
+  myVideos.forEach(v => {
+    let cat = v.category || 'Other';
+    if(!categoryData[cat]) categoryData[cat] = {videos: 0, comments: 0};
+    categoryData[cat].videos++;
+    categoryData[cat].comments += (v.comments ? v.comments.length : 0);
+  });
+
+  let catLabels = Object.keys(categoryData);
+  let catDataVideos = Object.values(categoryData).map(c => c.videos);
+
+  const ctxCat = document.getElementById('categoryChart');
+  if(window.categoryChartInstance) window.categoryChartInstance.destroy();
+  if(catLabels.length > 0){
+    window.categoryChartInstance = new Chart(ctxCat, {
+      type:'doughnut',
+      data:{
+        labels:catLabels,
+        datasets:[{
+          data:catDataVideos,
+          backgroundColor:['#00FF88','#00D9FF','#FF3366','#FFD700','#FF6B9D','#C44569','#FFA502','#4A90E2'],
+          borderColor:'#0A0A0F',
+          borderWidth:2
+        }]
+      },
+      options:{responsive:true,maintainAspectRatio:true}
+    });
+  }
+
+  let bestVideo = myVideos.reduce((best, current) => {
+    let currentFB = current.comments ? current.comments.length : 0;
+    let bestFB = best.comments ? best.comments.length : 0;
+    if(currentFB > bestFB) return current;
+    if(currentFB === bestFB && (current.uploadedAt||0) > (best.uploadedAt||0)) return current;
+    return best;
+  }, myVideos[0] || {title:'No videos yet', comments:[]});
+
+  if(myVideos.length === 0){
+    document.getElementById('bestVideoInfo').innerHTML = '<p style="color:var(--muted)">Upload videos to see best performer!</p>';
+  } else {
+    let bestFB = bestVideo.comments ? bestVideo.comments.length : 0;
+    let videoXPVal = bestVideo.xp || 10;
+    document.getElementById('bestVideoInfo').innerHTML = `
+      <div style="margin-bottom:10px">
+        <div style="font-weight:700;color:var(--accent);font-size:16px">${bestVideo.title}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:14px">
+        <div>📝 Comments: <strong style="color:var(--accent)">${bestFB}/${bestVideo.maxUsers || 10}</strong></div>
+        <div>⚡ XP per User: <strong style="color:var(--accent)">${videoXPVal}</strong></div>
+        <div>🏷️ Category: <strong style="color:var(--accent2)">${bestVideo.category}</strong></div>
+        <div>👤 By: <strong style="color:var(--accent2)">${bestVideo.by}</strong></div>
+      </div>
+    `;
+  }
+}
+
+function getLast7DaysXP(){
+  let labels = [];
+  let data = [];
+  for(let i = 6; i >= 0; i--){
+    let d = new Date();
+    d.setDate(d.getDate() - i);
+    let dateStr = d.toISOString().split('T')[0];
+    labels.push(d.toLocaleDateString('en-US', {weekday:'short'}));
+    data.push(dailyXP[dateStr] || 0);
+  }
+  return {labels, data};
+}
+
+function loadPendingTasks(){
+  let container = document.getElementById('pendingTasksList');
+  if(!container) return;
+
+  if(myComments.length === 0){
+    container.innerHTML = '<p style="color:var(--muted);text-align:center;padding:10px;font-size:13px">No pending tasks</p>';
+    return;
+  }
+
+  let html = '';
+  myComments.slice().reverse().forEach(c => {
+    let statusColor = c.status === 'approved' ? 'var(--accent)' : c.status === 'rejected' ? 'var(--danger)' : '#FFD700';
+    let statusText = c.status === 'approved' ? '✅ Approved' : c.status === 'rejected' ? '❌ Rejected' : '⏳ Pending';
+    html += `<div style="background:rgba(0,0,0,0.3);padding:12px;border-radius:8px;margin-bottom:10px;border-left:3px solid ${statusColor}">
+      <div style="font-weight:600;color:var(--text);font-size:13px;margin-bottom:4px">${c.videoTitle}</div>
+      <div style="color:var(--muted);font-size:12px;margin-bottom:6px;word-break:break-word">${c.comment}</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:${statusColor};font-weight:700">${statusText}</span>
+        <span style="font-size:11px;color:var(--muted)">⚡ ${c.xp} XP</span>
+      </div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ============ SOCIAL TASKS RENDER + CLAIM ============
+function loadSocialTasks(){
+  let container = document.getElementById('socialTasksList');
+  if(!container) return;
+
+  let html = '';
+  socialTasks.forEach(task => {
+    let isDone = completedSocialTasks[task.id];
+
+    if(isDone){
+      html += `<div class="social-task-item">
+        <div class="social-task-claimed">
+          <span>${task.icon} ${task.label}</span>
+          <b style="color:var(--accent)">✅ Claimed</b>
+        </div>
+      </div>`;
+    } else {
+      html += `<div class="social-task-item">
+        <div class="social-task-top">
+          <span class="social-task-label">${task.icon} ${task.label}</span>
+          <span class="social-task-xp">+${task.xp} XP</span>
+        </div>
+        <button class="task-button" onclick="claimSocialTask('${task.id}')">🔗 Join &amp; Claim ${task.xp} XP</button>
+      </div>`;
+    }
+  });
+
+  container.innerHTML = html;
+}
+
+function claimSocialTask(taskId){
+  if(completedSocialTasks[taskId]){
+    showToast('❌ Already claimed!', 'error');
+    return;
+  }
+
+  let task = socialTasks.find(t => t.id === taskId);
+  if(!task) return;
+
+  window.open(task.link, '_blank');
+
+  completedSocialTasks[taskId] = true;
+  points += task.xp;
+
+  saveDataToFirestore();
+  updateProfile();
+  showToast(`✅ +${task.xp} XP claimed for "${task.label}"!`);
+}
+
+function updateProfile(){
+  checkAndExpireSubscription();
+
+  let planName = 'Free'; 
+  let badge = 'FREE'; 
+  let ai = '0/day'; 
+  let upload = '3/day'; 
+  let validity = 'No active plan'; 
+  let creator = 'BASIC CREATOR'; 
+  let badgeColor = '#2a2a3a';
+  let maxUsers = planData[plan].maxUsers + ' Users';
+
+  if(plan === 'daily'){planName = 'Daily Member'; badge = 'PRO'; ai = '5/day'; upload = '3/day'; validity = '24 Hours'; creator = 'PRO CREATOR'; badgeColor = '#FF2E63';}
+  if(plan === 'weekly'){planName = 'Weekly Member'; badge = 'PRO+'; ai = '20/day'; upload = '10/day'; validity = '7 Days'; creator = 'PRO CREATOR'; badgeColor = '#FF6B9D';}
+  if(plan === 'monthly'){planName = 'Monthly Member'; badge = 'VIP ✨'; ai = '30/day'; upload = 'UNLIMITED'; validity = '24 Hours'; creator = 'VIP CREATOR'; badgeColor = '#FFD700';}
+
+  let activePlanSection = document.getElementById('activePlanSection');
+  let pendingPaymentSection = document.getElementById('pendingPaymentSection');
+
+  if(plan !== 'free' && Date.now() < planExpiry){
+    activePlanSection.style.display = 'block';
+    pendingPaymentSection.style.display = 'none';
+
+    let timeLeft = planExpiry - Date.now();
+    let hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    let days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    let timeStr = days > 0 ? days + ' day(s)' : hours + ' hour(s)';
+
+    document.getElementById('activePlanName').innerText = planName;
+    document.getElementById('activePlanStatus').innerText = '✅ Verified';
+    document.getElementById('activePlanExpires').innerText = timeStr;
+    document.getElementById('activePlanAmount').innerText = '₹' + planData[plan].price;
+
+    document.getElementById('subStatus').innerText = planName;
+    document.getElementById('subPaymentStatus').innerText = '✅ Verified';
+    document.getElementById('subExpiry').innerText = new Date(planExpiry).toLocaleString('en-IN');
+    document.getElementById('subTimeLeft').innerText = timeStr;
+  }
+  else if(subscription.status === 'pending'){
+    activePlanSection.style.display = 'none';
+    pendingPaymentSection.style.display = 'block';
+
+    let planNameForPending = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly'}[subscription.plan] || subscription.plan;
+    document.getElementById('pendingPlanName').innerText = planNameForPending;
+    document.getElementById('pendingPlanAmount').innerText = '₹' + subscription.amount;
+    document.getElementById('pendingRefNumber').innerText = subscription.referenceNumber;
+    document.getElementById('pendingSubmittedAt').innerText = new Date(subscription.submittedAt).toLocaleString('en-IN');
+
+    document.getElementById('subStatus').innerText = 'Pending';
+    document.getElementById('subPaymentStatus').innerText = '⏳ Verifying...';
+    document.getElementById('subExpiry').innerText = new Date(subscription.submittedAt).toLocaleString('en-IN');
+    document.getElementById('subTimeLeft').innerText = '1-3 hours';
+  }
+  else {
+    activePlanSection.style.display = 'none';
+    pendingPaymentSection.style.display = 'none';
+
+    document.getElementById('subStatus').innerText = 'Free';
+    document.getElementById('subPaymentStatus').innerText = 'None';
+    document.getElementById('subExpiry').innerText = '-';
+    document.getElementById('subTimeLeft').innerText = '-';
+  }
+
+  document.getElementById('profilePlan').innerText = planName;
+  document.getElementById('profileBadge').innerText = badge;
+  document.getElementById('badgeTop').innerText = badge;
+  document.getElementById('badgeTop').style.background = badgeColor;
+  document.getElementById('badgeTop').style.color = badge === 'VIP ✨' ? '#000' : '#FFF';
+  document.getElementById('profileAI').innerText = ai;
+  document.getElementById('profileUpload').innerText = upload;
+  document.getElementById('profileUserLimit').innerText = maxUsers;
+  document.getElementById('profileExpiry').innerText = validity;
+  document.getElementById('creatorType').innerText = creator;
+  document.getElementById('profileXP').innerText = points;
+
+  let totalViews = myVideos.reduce((sum, v) => sum + (v.comments ? v.comments.length : 0), 0);
+  document.getElementById('profileViews').innerText = totalViews;
+  document.getElementById('profileTotalVideos').innerText = myVideos.length;
+
+  let statusEl = document.getElementById('profileStatus');
+  if(plan === 'free'){statusEl.innerText = 'FREE'; statusEl.className = 'free';} else {statusEl.innerText = 'ACTIVE'; statusEl.className = 'active';}
+  loadPendingTasks();
+  loadSocialTasks();
+}
+
+function updateUploadLimit(){
+  let limit = plan==='free'?3: plan==='monthly'?999:planData[plan].days===1?3:30;
+  let today = todayKey();
+  let extraUnlockedToday = extraUploads[today] || 0;
+  let effectiveLimit = limit + extraUnlockedToday;
+  let left = effectiveLimit - myVideos.length;
+
+  document.getElementById('uploadLimit').innerText = `${plan==='free'?'FREE':plan==='monthly'?'MONTHLY (UNLIMITED)':planData[plan].name.toUpperCase()}: ${left} videos left${extraUnlockedToday>0 ? ' (incl. '+extraUnlockedToday+' extra)' : ''}`;
+
+  let extraBox = document.getElementById('extraUploadBox');
+  if(left <= 0 && plan === 'free'){
+    extraBox.style.display = 'block';
+  } else {
+    extraBox.style.display = 'none';
+  }
+}
+
+function activateTool(toolId) {
+  document.querySelectorAll('.tool-content').forEach(t => t.classList.remove('active'));
+  document.getElementById(toolId + '-tool').classList.add('active');
+}
+
+function closeTool() {
+  document.querySelectorAll('.tool-content').forEach(t => t.classList.remove('active'));
+}
+
+function generateHashtags() {
+  let niche = document.getElementById('hashKeyword').value;
+
+  if (!niche) {
+    showToast('❌ Enter your niche', 'error');
+    return;
+  }
+
+  const hashtags = [
+    `#${niche}`, `#${niche}er`, `#${niche}hub`, `#${niche}life`,
+    '#trending', '#viral', '#foryou', '#fyp',
+    '#explore', '#explorepage', '#foryoupage', '#viral2024',
+    '#content', '#creator', '#creatoreconomy', '#youtube',
+    '#shorts', '#instagram', '#instagram reels', '#tiktok',
+    '#motivation', '#inspiration', '#success', '#goals'
+  ];
+
+  let hashtagString = hashtags.join(' ');
+  document.getElementById('hashOutput').textContent = hashtagString;
+  document.getElementById('hashOutput').style.display = 'block';
+  document.getElementById('hashCopyBtn').style.display = 'block';
+}
+
+function generateBestTime() {
+  let platform = document.getElementById('platform').value;
+  let audience = document.getElementById('audience').value;
+
+  if (!platform || !audience) {
+    showToast('❌ Select platform and audience', 'error');
+    return;
+  }
+
+  const bestTimes = {
+    youtube: {
+      india: "6 PM - 9 PM IST",
+      us: "2 PM - 5 PM EST",
+      uk: "7 PM - 10 PM GMT",
+      asia: "6 PM - 9 PM PST"
+    },
+    instagram: {
+      india: "7 PM - 10 PM IST",
+      us: "1 PM - 4 PM EST",
+      uk: "6 PM - 9 PM GMT",
+      asia: "7 PM - 10 PM PST"
+    },
+    tiktok: {
+      india: "8 PM - 11 PM IST",
+      us: "11 AM - 1 PM EST",
+      uk: "5 PM - 7 PM GMT",
+      asia: "8 PM - 11 PM PST"
+    },
+    twitter: {
+      india: "9 AM - 11 AM IST",
+      us: "12 PM - 2 PM EST",
+      uk: "5 PM - 7 PM GMT",
+      asia: "9 AM - 11 AM PST"
+    },
+    facebook: {
+      india: "1 PM - 3 PM IST",
+      us: "3 PM - 5 PM EST",
+      uk: "7 PM - 9 PM GMT",
+      asia: "1 PM - 3 PM PST"
+    }
+  };
+
+  const info = {
+    youtube: "Weekly videos best for subscribers. Upload consistently.",
+    instagram: "Reels get 67% more engagement. Post when followers are active.",
+    tiktok: "Morning/evening peak. Consistency is more important than timing.",
+    twitter: "News cycles matter most. Tweet during trending topics.",
+    facebook: "Afternoon to evening best for views."
+  };
+
+  let bestTime = bestTimes[platform]?.[audience] || "Data unavailable";
+  let platformInfo = info[platform] || "";
+
+  let html = `
+    <div style="background:rgba(0,255,136,0.08);padding:18px;border-radius:10px;border-left:4px solid var(--accent)">
+      <div style="color:var(--accent);font-weight:700;font-size:16px;margin-bottom:8px">🕐 Best Time to Post</div>
+      <div style="color:var(--text);font-size:18px;font-weight:600;margin-bottom:12px">${bestTime}</div>
+      <div style="color:var(--muted);font-size:14px;line-height:1.5">${platformInfo}</div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,255,136,0.2);color:var(--muted);font-size:13px">
+        💡 Pro Tip: Upload 1-2 hours before peak time for maximum reach
+      </div>
+    </div>
+  `;
+
+  document.getElementById('bestTimeOutput').innerHTML = html;
+}
+
+function extractVideoData() {
+  let videoLink = document.getElementById('videoLink').value;
+  let videoID = getVideoID(videoLink);
+
+  if (!videoID) {
+    showToast('❌ Enter valid YouTube link', 'error');
+    return;
+  }
+
+  if(points < TRANSCRIPT_XP_COST){
+    showToast(`❌ Need ${TRANSCRIPT_XP_COST} XP!`, 'error');
+    return;
+  }
+  if(!confirm(`Spend ${TRANSCRIPT_XP_COST} XP to extract transcript?`)){
+    return;
+  }
+
+  points -= TRANSCRIPT_XP_COST;
+  saveDataToFirestore();
+  document.getElementById('points').innerText = points;
+
+  const mockData = {
+    title: "How to Create Viral Content in 2024",
+    category: "Education",
+    channelName: "Creator Adda",
+    views: "125K",
+    likes: "3.2K",
+    comments: "145",
+    uploadedDate: "2 weeks ago",
+    description: "Learn the secrets of creating viral content in 2024..."
+  };
+
+  let html = `
+    <div class="card">
+      <div class="output-section">
+        <div class="output-label">📺 Video Title</div>
+        <div class="output-box">${mockData.title}</div>
+        <button class="copy-btn" onclick="simpleCopy('${mockData.title.replace(/'/g, "\\'")}')" >Copy Title</button>
+      </div>
+      <div class="output-section">
+        <div class="output-label">🏷️ Category</div>
+        <div class="output-box">${mockData.category}</div>
+      </div>
+      <div class="output-section">
+        <div class="output-label">👤 Channel</div>
+        <div class="output-box">${mockData.channelName}</div>
+      </div>
+      <div class="output-section">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="output-box" style="text-align:center"><b>${mockData.views}</b> Views</div>
+          <div class="output-box" style="text-align:center"><b>${mockData.likes}</b> Likes</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('transcriptOutput').innerHTML = html;
+}
+
+</script>
+
+</body>
+</html>
