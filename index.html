@@ -1482,8 +1482,8 @@ async function loadUPIFromFirestore(){
     const adminDoc = await db.collection('settings').doc('payment').get();
     if(adminDoc.exists){
       const data = adminDoc.data();
-      if(data.upi || data.upiId){
-        adminUPI = data.upi || data.upiId;
+      if(data.upiId){
+        adminUPI = data.upiId;
         console.log('✅ UPI loaded from Firestore:', adminUPI);
       }
     }
@@ -1497,8 +1497,8 @@ function startUPIListener(){
   if(!firebaseReady || !db) return;
   
   db.collection('settings').doc('payment').onSnapshot(doc => {
-    if(doc.exists && (doc.data().upi || doc.data().upiId)){
-      adminUPI = doc.data().upi || doc.data().upiId;
+    if(doc.exists && doc.data().upiId){
+      adminUPI = doc.data().upiId;
       console.log('🔄 UPI updated:', adminUPI);
       
       // Update UPI display if payment page is open
@@ -2259,7 +2259,7 @@ let dailyTierData = {
     features: [
       '✓ Max User Views — <b>500 Users Limit</b>',
       '✓ Video Upload — <b>Unlimited (100+)</b>',
-      '✓ Max XP earning limit — <b>200,000 XP</b>',
+      '✓ Max XP earning limit — <b>100,000 XP</b>',
       '✓ 🏆 Gold Badge on Videos',
       '✓ 50 xp on your Videos',
       '✓ 🕒 24 hours active'
@@ -2274,9 +2274,9 @@ let dailyTierData = {
     features: [
       '✓ Max User Views — <b>Unlimited</b>',
       '✓ Video Upload — <b>Unlimited (500+)</b>',
-      '✓ Max XP earning limit — <b>100,000 XP</b>',
+      '✓ Max XP earning limit — <b>500,000 XP</b>',
       '✓ 👑 Premium Badge on Videos',
-      '✓ 100 xp on your Videos',
+      '✓ 150 xp on your Videos',
       '✓ 🕒 24 hours active'
     ]
   }
