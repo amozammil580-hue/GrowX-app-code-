@@ -1472,42 +1472,112 @@ async function trackNotificationViews(){
   }
 }
 
-// ============ UPI SYNC FROM FIRESTORE ============
-let adminUPI = 'bshsb@upi'; // Default fallback
+// ============ PLAN LOCK & PLAN-WISE UPI SYNC FROM FIRESTORE ============
+let planLocks = {};
+let planUPIIds = {};
+let currentSelectedPlan = null; // Track currently selected plan in payment
 
-async function loadUPIFromFirestore(){
+// Map daily tier names to Firestore plan IDs
+function getDailyPlanId(tier){
+  const tierMap = {
+    'free': 'daily_free',
+    'basic': 'daily_basic',
+    'gold': 'daily_gold',
+    'premium': 'daily_premium'
+  };
+  return tierMap[tier] || 'daily_free';
+}
+
+// Get the correct plan ID based on plan type and tier
+function getPlanId(planType, tier = null){
+  if(planType === 'daily' && tier){
+    return getDailyPlanId(tier);
+  }
+  if(planType === 'daily_basic' || planType === 'basic'){
+    return 'daily_basic';
+  }
+  if(planType === 'daily_gold' || planType === 'gold'){
+    return 'daily_gold';
+  }
+  if(planType === 'daily_premium' || planType === 'premium'){
+    return 'daily_premium';
+  }
+  if(planType === 'daily' || planType === 'free'){
+    return 'daily_free';
+  }
+  if(planType === 'weekly'){
+    return 'weekly';
+  }
+  if(planType === 'monthly'){
+    return 'monthly';
+  }
+  return planType;
+}
+
+// Load plan locks and UPI IDs from Firestore
+async function loadPlanSettingsFromFirestore(){
   if(!firebaseReady || !db) return;
   
   try {
-    const adminDoc = await db.collection('settings').doc('payment').get();
-    if(adminDoc.exists){
-      const data = adminDoc.data();
-      if(data.upiId){
-        adminUPI = data.upiId;
-        console.log('✅ UPI loaded from Firestore:', adminUPI);
+    const settingsDoc = await db.collection('settings').doc('plans').get();
+    if(settingsDoc.exists){
+      const data = settingsDoc.data();
+      if(data.locks){
+        planLocks = data.locks;
+        console.log('✅ Plan locks loaded:', planLocks);
+      }
+      if(data.upiIds){
+        planUPIIds = data.upiIds;
+        console.log('✅ Plan UPI IDs loaded:', Object.keys(planUPIIds));
       }
     }
   } catch(err) {
-    console.log('UPI load error:', err);
+    console.log('Plan settings load error:', err);
   }
 }
 
-// Listen to real-time UPI changes
-function startUPIListener(){
+// Listen to real-time plan lock and UPI changes
+function startPlanSettingsListener(){
   if(!firebaseReady || !db) return;
   
-  db.collection('settings').doc('payment').onSnapshot(doc => {
-    if(doc.exists && doc.data().upiId){
-      adminUPI = doc.data().upiId;
-      console.log('🔄 UPI updated:', adminUPI);
+  db.collection('settings').doc('plans').onSnapshot(doc => {
+    if(doc.exists){
+      const data = doc.data();
+      
+      // Update locks
+      if(data.locks){
+        planLocks = data.locks;
+        console.log('🔄 Plan locks updated:', planLocks);
+      }
+      
+      // Update UPI IDs
+      if(data.upiIds){
+        planUPIIds = data.upiIds;
+        console.log('🔄 Plan UPI IDs updated:', Object.keys(planUPIIds));
+      }
       
       // Update UPI display if payment page is open
       let upiDisplay = document.getElementById('upiDisplay');
-      if(upiDisplay){
-        upiDisplay.innerText = adminUPI;
+      if(upiDisplay && currentSelectedPlan){
+        const upiId = planUPIIds[currentSelectedPlan] || '';
+        if(upiId){
+          upiDisplay.innerText = upiId;
+        }
       }
     }
+  }, err => {
+    console.log('Plan settings listener error:', err);
   });
+}
+
+// Get UPI ID for a specific plan
+function getUPIForPlan(planId){
+  return planUPIIds[planId] || '';
+}
+
+// Check if a plan is locked
+function isPlanLocked(planId){
+  return planLocks[planId] === true;
 }
 
 // ============ AD PANEL SYSTEM ============
@@ -1862,8 +1932,8 @@ function completeLogin() {
   initAdPanel();
   startBanListener();
   loadNotifications();
-  loadUPIFromFirestore();
-  startUPIListener();
+  loadPlanSettingsFromFirestore();
+  startPlanSettingsListener();
 }
 
 // ============ ADMIN BAN SYNC (NO DATA DELETE) ============
@@ -2330,9 +2400,37 @@ function buySelectedDailyTier(){
     return;
   }
   
+  // ✅ CHECK IF THIS DAILY TIER IS LOCKED
+  const planId = getDailyPlanId(selectedDailyTier);
+  if(isPlanLocked(planId)){
+    showToast('This plan is temporary locked', 'error');
+    return;
+  }
+  
   let tierInfo = dailyTierData[selectedDailyTier];
   let planType = selectedDailyTier === 'basic' ? 'daily' : selectedDailyTier;
-  buyPlan(planType, tierInfo.price);
+  
+  let canBuy = canPurchasePlan();
+  if(!canBuy.allowed){
+    showToast(canBuy.message, 'error');
+    return;
+  }
+
+  currentPaymentPlan = selectedDailyTier;
+  currentPaymentAmount = tierInfo.price;
+  let planNames = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', basic: 'Daily', gold: 'Daily', premium: 'Daily'};
+  let validity = {daily: '24 Hours', weekly: '7 Days', monthly: '24 Hours', basic: '24 Hours', gold: '24 Hours', premium: '24 Hours'};
+
+  document.getElementById('paymentAmount').innerText = '₹' + tierInfo.price;
+  document.getElementById('paymentPlan').innerText = tierInfo.name + ' Plan';
+  document.getElementById('paymentValidity').innerText = validity[selectedDailyTier] + ' Validity';
+
+  // ✅ LOAD PLAN-WISE UPI FROM FIRESTORE
+  currentSelectedPlan = planId;
+  const upiId = getUPIForPlan(planId);
+  document.getElementById('upiDisplay').innerText = upiId || 'Loading UPI...';
+
+  showPage('payment', null);
 }
 
 function selectPlan(type){
@@ -2423,6 +2521,13 @@ function buyPlan(planType, amount){
     return;
   }
 
+  // ✅ CHECK IF PLAN IS LOCKED
+  const planId = getPlanId(planType);
+  if(isPlanLocked(planId)){
+    showToast('This plan is temporary locked', 'error');
+    return;
+  }
+
   currentPaymentPlan = planType;
   currentPaymentAmount = amount;
   let planNames = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly'};
@@ -2432,8 +2537,10 @@ function buyPlan(planType, amount){
   document.getElementById('paymentPlan').innerText = planNames[planType] + ' Plan';
   document.getElementById('paymentValidity').innerText = validity[planType] + ' Validity';
 
-  // ✅ LOAD UPI FROM FIRESTORE (SYNCED WITH ADMIN)
-  document.getElementById('upiDisplay').innerText = adminUPI;
+  // ✅ LOAD PLAN-WISE UPI FROM FIRESTORE (SYNCED WITH ADMIN)
+  currentSelectedPlan = planId;
+  const upiId = getUPIForPlan(planId);
+  document.getElementById('upiDisplay').innerText = upiId || 'Loading UPI...';
 
   showPage('payment', null);
 }
