@@ -731,6 +731,69 @@
     font-size:13px;color:var(--muted);
   }
 
+  /* RULES & POLICIES STYLES */
+  .rules-section{
+    background:rgba(18,18,26,0.8);border:1.5px solid rgba(0,255,136,0.2);
+    border-radius:16px;padding:20px;margin-top:20px;margin-bottom:20px;
+  }
+
+  .rules-title{
+    font-family:'Orbitron';font-size:16px;font-weight:700;
+    color:var(--accent);margin-bottom:20px;
+    text-shadow:0 0 15px rgba(0,255,136,0.3);
+  }
+
+  .rules-grid{
+    display:grid;grid-template-columns:1fr;gap:15px;margin-bottom:20px;
+  }
+
+  @media(min-width:600px){
+    .rules-grid{grid-template-columns:1fr 1fr;}
+  }
+
+  .rule-box{
+    background:rgba(18,18,26,0.9);border:1px solid rgba(0,255,136,0.15);
+    border-radius:12px;padding:16px;transition:all 0.3s;
+    min-height:200px;overflow-y:auto;
+    max-height:300px;
+  }
+
+  .rule-box:hover{
+    border-color:rgba(0,255,136,0.35);
+    box-shadow:0 0 20px rgba(0,255,136,0.1);
+  }
+
+  .rule-box-label{
+    font-family:'Orbitron';font-size:13px;font-weight:700;
+    color:var(--accent);margin-bottom:12px;
+    display:flex;align-items:center;gap:8px;
+  }
+
+  .rule-box-content{
+    font-size:13px;color:var(--text);line-height:1.6;
+    word-break:break-word;white-space:pre-wrap;
+  }
+
+  .rule-box-empty{
+    color:var(--muted);font-size:12px;text-align:center;
+    display:flex;align-items:center;justify-content:center;
+    height:100%;font-style:italic;
+  }
+
+  .rule-box-copy-btn{
+    width:100%;background:rgba(0,255,136,0.1);border:1px solid rgba(0,255,136,0.2);
+    color:var(--accent);padding:10px;border-radius:8px;margin-top:12px;
+    font-size:12px;font-weight:700;cursor:pointer;transition:all 0.3s;
+  }
+
+  .rule-box-copy-btn:hover{
+    background:rgba(0,255,136,0.2);box-shadow:0 0 15px rgba(0,255,136,0.2);
+  }
+
+  .rule-box-copy-btn:active{
+    transform:scale(0.98);
+  }
+
 </style>
 </head>
 <body>
@@ -1300,6 +1363,48 @@
     <div class="profile-card">
       <div class="profile-title">🎁 Social Tasks (One-Time 250 XP Each)</div>
       <div id="socialTasksList"></div>
+    </div>
+
+    <!-- RULES & POLICIES SECTION -->
+    <div class="rules-section">
+      <div class="rules-title">📋 App Rules & Policies</div>
+      <div class="rules-grid">
+        <!-- PRIVACY POLICY BOX -->
+        <div class="rule-box">
+          <div class="rule-box-label">🔐 Privacy Policy</div>
+          <div class="rule-box-content" id="privacyPolicyBox">
+            <div class="rule-box-empty">Loading privacy policy...</div>
+          </div>
+          <button class="rule-box-copy-btn" onclick="copyRuleText('privacyPolicyBox')">📋 Copy Text</button>
+        </div>
+
+        <!-- TERMS & CONDITIONS BOX -->
+        <div class="rule-box">
+          <div class="rule-box-label">⚖️ Terms & Conditions</div>
+          <div class="rule-box-content" id="termsConditionsBox">
+            <div class="rule-box-empty">Loading terms & conditions...</div>
+          </div>
+          <button class="rule-box-copy-btn" onclick="copyRuleText('termsConditionsBox')">📋 Copy Text</button>
+        </div>
+
+        <!-- USAGE POLICY BOX -->
+        <div class="rule-box">
+          <div class="rule-box-label">🛡️ Usage Policy</div>
+          <div class="rule-box-content" id="usagePolicyBox">
+            <div class="rule-box-empty">Loading usage policy...</div>
+          </div>
+          <button class="rule-box-copy-btn" onclick="copyRuleText('usagePolicyBox')">📋 Copy Text</button>
+        </div>
+
+        <!-- COMMUNITY GUIDELINES BOX -->
+        <div class="rule-box">
+          <div class="rule-box-label">📖 Community Guidelines</div>
+          <div class="rule-box-content" id="guidelinesBox">
+            <div class="rule-box-empty">Loading community guidelines...</div>
+          </div>
+          <button class="rule-box-copy-btn" onclick="copyRuleText('guidelinesBox')">📋 Copy Text</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1934,6 +2039,7 @@ function completeLogin() {
   loadNotifications();
   loadPlanSettingsFromFirestore();
   startPlanSettingsListener();
+  startRulesListener();
 }
 
 // ============ ADMIN BAN SYNC (NO DATA DELETE) ============
@@ -2000,6 +2106,108 @@ function startLoadingScreen() {
 
 function showSignupScreen() {
   document.getElementById('signupScreen').classList.add('show');
+}
+
+// ============ RULES & POLICIES FUNCTIONS ============
+let appRulesData = {
+  privacy: "Privacy policy not set yet.",
+  terms: "Terms & conditions not set yet.",
+  policy: "Usage policy not set yet.",
+  guidelines: "Community guidelines not set yet."
+};
+
+function startRulesListener() {
+  try {
+    if (!db) {
+      console.error("❌ Firestore not initialized yet");
+      return;
+    }
+    
+    db.collection("appRules").doc("rulesContent").onSnapshot((doc) => {
+      if (doc.exists) {
+        appRulesData = doc.data();
+        console.log("✅ Rules loaded from Firestore:", appRulesData);
+        displayRulesInProfile();
+      } else {
+        console.log("⚠️ No rules document found, using defaults");
+        displayRulesInProfile();
+      }
+    }, (error) => {
+      console.error("❌ Rules listener error:", error);
+      displayRulesInProfile();
+    });
+  } catch (error) {
+    console.error("❌ Error starting rules listener:", error);
+    displayRulesInProfile();
+  }
+}
+
+function displayRulesInProfile() {
+  // Privacy Policy Box
+  const privacyBox = document.getElementById('privacyPolicyBox');
+  if (privacyBox) {
+    if (appRulesData.privacy && appRulesData.privacy.trim()) {
+      privacyBox.innerHTML = `<div class="rule-box-content">${appRulesData.privacy}</div>`;
+    } else {
+      privacyBox.innerHTML = '<div class="rule-box-empty">🔐 Privacy policy not set by admin yet</div>';
+    }
+  }
+
+  // Terms & Conditions Box
+  const termsBox = document.getElementById('termsConditionsBox');
+  if (termsBox) {
+    if (appRulesData.terms && appRulesData.terms.trim()) {
+      termsBox.innerHTML = `<div class="rule-box-content">${appRulesData.terms}</div>`;
+    } else {
+      termsBox.innerHTML = '<div class="rule-box-empty">⚖️ Terms & conditions not set by admin yet</div>';
+    }
+  }
+
+  // Usage Policy Box (mapped from 'policy')
+  const policyBox = document.getElementById('usagePolicyBox');
+  if (policyBox) {
+    if (appRulesData.policy && appRulesData.policy.trim()) {
+      policyBox.innerHTML = `<div class="rule-box-content">${appRulesData.policy}</div>`;
+    } else {
+      policyBox.innerHTML = '<div class="rule-box-empty">🛡️ Usage policy not set by admin yet</div>';
+    }
+  }
+
+  // Community Guidelines Box
+  const guidelinesBox = document.getElementById('guidelinesBox');
+  if (guidelinesBox) {
+    if (appRulesData.guidelines && appRulesData.guidelines.trim()) {
+      guidelinesBox.innerHTML = `<div class="rule-box-content">${appRulesData.guidelines}</div>`;
+    } else {
+      guidelinesBox.innerHTML = '<div class="rule-box-empty">📖 Community guidelines not set by admin yet</div>';
+    }
+  }
+}
+
+function copyRuleText(boxId) {
+  const box = document.getElementById(boxId);
+  if (!box) return;
+
+  const textElement = box.querySelector('.rule-box-content');
+  const text = textElement ? textElement.innerText : '';
+
+  if (!text || text.includes('not set by admin yet')) {
+    showToast('❌ No content to copy', 'error');
+    return;
+  }
+
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('✅ Text copied to clipboard!', 'success');
+  }).catch(() => {
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showToast('✅ Text copied!', 'success');
+  });
 }
 
 window.addEventListener('load', startLoadingScreen);
