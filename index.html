@@ -1003,6 +1003,14 @@
         <div><b>5:</b> Submit — X Tokens added after verification</div>
       </div>
     </div>
+
+    <!-- My X Token Requests (Pending / Verified / Rejected) -->
+    <div class="xtoken-card" style="margin-top:12px;">
+      <div style="font-family:'Orbitron';font-size:15px;color:var(--accent);margin-bottom:12px;text-align:center;">📋 My X Token Requests</div>
+      <div id="myXTokenRequestsList">
+        <div style="text-align:center;color:var(--muted);font-size:13px;padding:10px;">Loading...</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2317,9 +2325,18 @@ function startBanListener(){
   db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
     if(!doc.exists) return;
     const data = doc.data();
+
+    // Ban check
     if(data.banned === true && !isBanned){
       isBanned = true;
       deleteUserDataAndShowBanned();
+      return;
+    }
+
+    // X Token balance live update (admin approve ke baad turant update)
+    if(data.xtokenBalance !== undefined){
+      xtokenBalance = data.xtokenBalance || 0;
+      updateXTokenUI();
     }
   });
 }
@@ -2676,6 +2693,10 @@ async function loadDataFromFirestore(){
       dismissedNotifications = data.dismissedNotifications || {};
       completedSocialTasks = data.completedSocialTasks || {};
 
+      // X Token balance load
+      xtokenBalance = data.xtokenBalance || 0;
+      updateXTokenUI();
+
       // HARD XP CAP - plan ki maxXP se zyada kabhi nahi hoga (admin bhi nahi badha sakta)
       enforceXPCap();
 
@@ -2758,6 +2779,7 @@ async function initApp(){
   loadPlanFilter();
   loadFeed();
   updateProfile();
+  updateXTokenUI();
 }
 
 function syncFixedLayout(){
@@ -3377,7 +3399,16 @@ function loadFeed(){
 
   let filteredVideos = allVideos.filter(v => {
     let catMatch = selectedCategory === 'All' || v.category === selectedCategory;
-    let planMatch = selectedPlanTab === 'All' || (v.plan || 'free') === selectedPlanTab;
+    let videoPlan = (v.plan || 'free');
+    let planMatch = false;
+    if(selectedPlanTab === 'All'){
+      planMatch = true;
+    } else if(selectedPlanTab === 'daily'){
+      // Daily tab mein Basic + Gold + Premium teeno dikhenge
+      planMatch = (videoPlan === 'daily' || videoPlan === 'daily_basic' || videoPlan === 'daily_gold' || videoPlan === 'daily_premium');
+    } else {
+      planMatch = (videoPlan === selectedPlanTab);
+    }
     let notExpired = !v.expiresAt || Date.now() < v.expiresAt;
     return catMatch && planMatch && !v.removed && notExpired;
   });
@@ -4174,6 +4205,11 @@ let xtokenBalance = 0;
 let currentXTokenAmount = 0;
 let currentXTokenTotal = 0;
 
+function updateXTokenUI() {
+  const el = document.getElementById('xtokenValue');
+  if (el) el.innerText = xtokenBalance || 0;
+}
+
 function openXTokenModal(){
   // Load UPI - same as premium/monthly plan UPI
   let upi = getUPIForPlan('monthly') || getUPIForPlan('daily_premium') || getUPIForPlan('weekly') || getUPIForPlan('daily_gold') || '';
@@ -4187,11 +4223,80 @@ function openXTokenModal(){
   document.getElementById('xtokenUpiDisplay').innerText = upi || 'UPI not set by admin';
   document.getElementById('xtokenModal').classList.add('show');
   document.body.style.overflow = 'hidden';
+  loadMyXTokenRequests();
 }
 
 function closeXTokenModal(){
   document.getElementById('xtokenModal').classList.remove('show');
   document.body.style.overflow = '';
+}
+
+function loadMyXTokenRequests(){
+  const listEl = document.getElementById('myXTokenRequestsList');
+  if(!listEl) return;
+  if(!firebaseReady || !db || !currentUser){
+    listEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px;">Login required</div>';
+    return;
+  }
+  listEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px;">Loading...</div>';
+
+  db.collection('xtoken_recharges')
+    .where('userId', '==', currentUser.uid)
+    .get()
+    .then(snapshot => {
+      let requests = [];
+      snapshot.forEach(doc => {
+        requests.push({id: doc.id, ...doc.data()});
+      });
+      // Latest top pe
+      requests.sort((a, b) => {
+        const dateA = a.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+        const dateB = b.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+        return dateB - dateA;
+      });
+      renderMyXTokenRequests(requests);
+    })
+    .catch(err => {
+      console.log('My XToken load error:', err);
+      listEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:10px;">Could not load requests</div>';
+    });
+}
+
+function renderMyXTokenRequests(requests){
+  const listEl = document.getElementById('myXTokenRequestsList');
+  if(!listEl) return;
+
+  if(!requests || requests.length === 0){
+    listEl.innerHTML = '<div style="text-align:center;color:var(--muted);font-size:13px;padding:12px;">No requests yet</div>';
+    return;
+  }
+
+  listEl.innerHTML = requests.map(r => {
+    const status = String(r.status || 'pending').toLowerCase();
+    let statusColor = '#FFD700';
+    let statusText = '⏳ PENDING';
+    if(status === 'verified'){
+      statusColor = '#00FF88';
+      statusText = '✅ VERIFIED';
+    } else if(status === 'rejected'){
+      statusColor = '#FF2E63';
+      statusText = '❌ REJECTED';
+    }
+    const dateStr = r.submittedAt ? new Date(r.submittedAt).toLocaleString('en-IN') : 'N/A';
+    return `
+      <div style="background:rgba(0,0,0,0.3);border:1px solid rgba(0,255,136,0.15);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-weight:700;color:var(--accent);font-size:15px;">₹${r.amount || 0}</span>
+          <span style="font-size:11px;font-weight:700;color:${statusColor};">${statusText}</span>
+        </div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6;">
+          Tokens: <b style="color:var(--text)">${r.tokens || 0} X</b><br>
+          UTR: <b style="color:var(--text)">${r.referenceNumber || 'N/A'}</b><br>
+          Date: ${dateStr}
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function xtokenSelectPack(amount, base, bonus){
@@ -4268,18 +4373,17 @@ function submitXTokenPayment(){
   if(firebaseReady && db && currentUser){
     db.collection('xtoken_recharges').add(rechargeData).then(() => {
       showToast('✅ X Token request submitted! Verification soon');
-      closeXTokenModal();
       document.getElementById('xtokenAmount').value = '';
       document.getElementById('xtokenRefInput').value = '';
       xtokenManualInput();
+      // Modal band mat karo, list refresh karo taaki pending dikhe
+      loadMyXTokenRequests();
     }).catch(err => {
       console.log('XToken submit error:', err);
       showToast('⚠️ Submitted but sync pending', 'error');
-      closeXTokenModal();
     });
   } else {
     showToast('✅ Request recorded (offline mode)');
-    closeXTokenModal();
   }
 }
 
