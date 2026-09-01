@@ -1247,7 +1247,7 @@
           <div class="profile-badge" id="badgeTop">FREE</div>
         </div>
       </div>
-      <button class="primary" style="margin-top:10px" onclick="openEditNameModal()">✏️ Edit Name (10 XP)</button>
+      <button class="primary" style="margin-top:10px" onclick="openEditNameModal()">✏️ Edit Name</button>
       <div class="profile-stats">
         <div class="profile-stat"><b id="profileViews">0</b><span>Views</span></div>
         <div class="profile-stat"><b id="profileXP">0</b><span>XP</span></div>
@@ -1844,8 +1844,8 @@ function openEditNameModal(){
     costLabel.innerText = '✨ First time: 10 XP (Default → Your Name)';
     costDisplay.innerText = '⚡ Cost: 10 XP';
   } else {
-    costLabel.innerText = `🔄 Name change #${nameChangeCount + 1}: 800 XP`;
-    costDisplay.innerText = '⚡ Cost: 800 XP';
+    costLabel.innerText = `🔄 Name change #${nameChangeCount + 1}: 10,000 XP`;
+    costDisplay.innerText = '⚡ Cost: 10,000 XP';
   }
   
   document.getElementById('editNameModal').classList.add('show');
@@ -1863,10 +1863,11 @@ function confirmEditName(){
     return;
   }
   
-  let requiredXP = nameChangeCount === 0 ? 10 : 800;
+  // First time = 10 XP, har baar baad mein = 10,000 XP
+  let requiredXP = nameChangeCount === 0 ? 10 : 10000;
   
   if(points < requiredXP){
-    showToast(`❌ Need ${requiredXP} XP! You have ${points}`, 'error');
+    showToast(`❌ Need ${requiredXP.toLocaleString()} XP! You have ${points}`, 'error');
     return;
   }
   
@@ -1882,7 +1883,7 @@ function confirmEditName(){
     if(nameChangeCount === 1){
       showToast(`✅ Name changed to "${newName}"! (10 XP spent)`);
     } else {
-      showToast(`✅ Name changed to "${newName}"! (800 XP spent)`);
+      showToast(`✅ Name changed to "${newName}"! (10,000 XP spent)`);
     }
     loadFeed();
   }).catch(err => {
@@ -2245,19 +2246,63 @@ const planTabs = [
   {key:'monthly', label:'Monthly Plan'}
 ];
 
+// ============ COMPLETE PLAN DATA (6 PLANS) ============
+// Jo yahan likha hai, wahi plan activate hone par user ko milega
 const planData = {
-  free: {price:0, days:0, credits:0, name:"Free", xp:10, maxUsers:10, badge:"FREE", badgeClass:"badge-free"},
-  daily: {price:5, days:1, credits:5, name:"Daily", xp:20, maxUsers:50, badge:"Daily plan", badgeClass:"badge-daily"},
-  weekly: {price:150, days:7, credits:20, name:"Weekly", xp:30, maxUsers:200, badge:"PRO", badgeClass:"badge-pro"},
-  monthly: {price:700, days:1, credits:30, name:"Monthly", xp:50, maxUsers:500, badge:"VIP ✨", badgeClass:"badge-vip", unlimited: true, maxXP: 50000}
-}
-const planOrder = ['daily', 'weekly', 'monthly'];
+  free: {
+    price: 0, days: 0, hours: 0, name: "Free",
+    xp: 10, maxUsers: 10, uploadLimit: 3, maxXP: 5000,
+    badge: "FREE", badgeClass: "badge-free",
+    durationMs: 24 * 60 * 60 * 1000
+  },
+  daily_basic: {
+    price: 5, days: 1, hours: 24, name: "Daily Basic",
+    xp: 20, maxUsers: 50, uploadLimit: 15, maxXP: 10000,
+    badge: "BASIC", badgeClass: "badge-daily",
+    durationMs: 24 * 60 * 60 * 1000
+  },
+  daily_gold: {
+    price: 30, days: 1, hours: 24, name: "Daily Gold",
+    xp: 50, maxUsers: 500, uploadLimit: 100, maxXP: 100000,
+    badge: "GOLD", badgeClass: "badge-vip",
+    durationMs: 24 * 60 * 60 * 1000
+  },
+  daily_premium: {
+    price: 50, days: 1, hours: 24, name: "Daily Premium",
+    xp: 150, maxUsers: 999999, uploadLimit: 500, maxXP: 500000,
+    badge: "PREMIUM", badgeClass: "badge-vip",
+    durationMs: 24 * 60 * 60 * 1000
+  },
+  weekly: {
+    price: 150, days: 7, hours: 168, name: "Weekly",
+    xp: 50, maxUsers: 250, uploadLimit: 50, maxXP: 50000,
+    badge: "PRO", badgeClass: "badge-pro",
+    durationMs: 7 * 24 * 60 * 60 * 1000
+  },
+  monthly: {
+    price: 700, days: 30, hours: 720, name: "Monthly",
+    xp: 50, maxUsers: 500, uploadLimit: 999, maxXP: 50000,
+    badge: "VIP ✨", badgeClass: "badge-vip",
+    durationMs: 30 * 24 * 60 * 60 * 1000
+  }
+};
+
+// Compatibility aliases (purane code ke liye)
+planData.daily = planData.daily_basic;
+planData.basic = planData.daily_basic;
+planData.gold = planData.daily_gold;
+planData.premium = planData.daily_premium;
+
+const planOrder = ['daily_basic', 'daily_gold', 'daily_premium', 'weekly', 'monthly'];
 
 const planVideoDurationMs = {
-  free: 24 * 60 * 60 * 1000,
-  daily: 24 * 60 * 60 * 1000,
-  weekly: 7 * 24 * 60 * 60 * 1000,
-  monthly: 24 * 60 * 60 * 1000
+  free: planData.free.durationMs,
+  daily: planData.daily_basic.durationMs,
+  daily_basic: planData.daily_basic.durationMs,
+  daily_gold: planData.daily_gold.durationMs,
+  daily_premium: planData.daily_premium.durationMs,
+  weekly: planData.weekly.durationMs,
+  monthly: planData.monthly.durationMs
 };
 
 const EXTRA_UPLOAD_XP_COST = 500;
@@ -2286,6 +2331,9 @@ function getDefaultUserNumber(){
 // ============ FIRESTORE OPERATIONS ============
 async function saveDataToFirestore(){
   if (!firebaseReady || !currentUser || !db) return;
+
+  // Hard cap before saving - plan capacity se zyada kabhi save nahi hoga
+  enforceXPCap();
 
   try {
     await db.collection('users').doc(currentUser.uid).update({
@@ -2328,10 +2376,31 @@ async function loadDataFromFirestore(){
       isBanned = data.banned === true;
       dismissedNotifications = data.dismissedNotifications || {};
       completedSocialTasks = data.completedSocialTasks || {};
+
+      // HARD XP CAP - plan ki maxXP se zyada kabhi nahi hoga (admin bhi nahi badha sakta)
+      enforceXPCap();
+
       console.log('✅ Data loaded from Firestore');
     }
   } catch (err) {
     console.log('⚠️ Load error:', err.message);
+  }
+}
+
+// HARD XP CAP - plan ki capacity se zyada XP allow nahi
+function enforceXPCap(){
+  let pInfo = planData[plan] || planData.free;
+  let maxAllowed = pInfo.maxXP || 5000;
+  if(points > maxAllowed){
+    console.log(`⚠️ XP capped from ${points} to ${maxAllowed} (plan limit)`);
+    points = maxAllowed;
+    // Firestore mein bhi force update
+    if(firebaseReady && currentUser && db){
+      db.collection('users').doc(currentUser.uid).update({
+        xp: maxAllowed,
+        points: maxAllowed
+      }).catch(()=>{});
+    }
   }
 }
 
@@ -2608,15 +2677,21 @@ function buySelectedDailyTier(){
     return;
   }
   
-  // ✅ CHECK IF THIS DAILY TIER IS LOCKED
-  const planId = getDailyPlanId(selectedDailyTier);
-  if(isPlanLocked(planId)){
+  // Map tier to real plan key
+  const tierToPlan = {
+    'basic': 'daily_basic',
+    'gold': 'daily_gold',
+    'premium': 'daily_premium'
+  };
+  const realPlanKey = tierToPlan[selectedDailyTier] || 'daily_basic';
+  
+  // CHECK IF THIS DAILY TIER IS LOCKED
+  if(isPlanLocked(realPlanKey) || isPlanLocked(getDailyPlanId(selectedDailyTier))){
     showToast('This plan is temporary locked', 'error');
     return;
   }
   
   let tierInfo = dailyTierData[selectedDailyTier];
-  let planType = selectedDailyTier === 'basic' ? 'daily' : selectedDailyTier;
   
   let canBuy = canPurchasePlan();
   if(!canBuy.allowed){
@@ -2624,18 +2699,15 @@ function buySelectedDailyTier(){
     return;
   }
 
-  currentPaymentPlan = selectedDailyTier;
+  currentPaymentPlan = realPlanKey;          // IMPORTANT: save real plan key
   currentPaymentAmount = tierInfo.price;
-  let planNames = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', basic: 'Daily', gold: 'Daily', premium: 'Daily'};
-  let validity = {daily: '24 Hours', weekly: '7 Days', monthly: '24 Hours', basic: '24 Hours', gold: '24 Hours', premium: '24 Hours'};
 
   document.getElementById('paymentAmount').innerText = '₹' + tierInfo.price;
   document.getElementById('paymentPlan').innerText = tierInfo.name + ' Plan';
-  document.getElementById('paymentValidity').innerText = validity[selectedDailyTier] + ' Validity';
+  document.getElementById('paymentValidity').innerText = '24 Hours Validity';
 
-  // ✅ LOAD PLAN-WISE UPI FROM FIRESTORE
-  currentSelectedPlan = planId;
-  const upiId = getUPIForPlan(planId);
+  currentSelectedPlan = realPlanKey;
+  const upiId = getUPIForPlan(realPlanKey) || getUPIForPlan(getDailyPlanId(selectedDailyTier));
   document.getElementById('upiDisplay').innerText = upiId || 'Loading UPI...';
 
   showPage('payment', null);
@@ -2706,9 +2778,10 @@ function initScrollSync(){
 
 function canPurchasePlan(){
   if(plan !== 'free' && Date.now() < planExpiry){
+    let planName = (planData[plan] && planData[plan].name) ? planData[plan].name : plan.toUpperCase();
     return {
       allowed: false,
-      message: `❌ You already have an active ${plan.toUpperCase()} plan! Wait until it expires.`
+      message: `❌ You already have an active ${planName} plan! Wait until it expires.`
     };
   }
 
@@ -2729,25 +2802,28 @@ function buyPlan(planType, amount){
     return;
   }
 
-  // ✅ CHECK IF PLAN IS LOCKED
-  const planId = getPlanId(planType);
-  if(isPlanLocked(planId)){
+  // Normalize plan key
+  let realPlanKey = planType;
+  if(planType === 'daily') realPlanKey = 'daily_basic';
+
+  const planId = getPlanId(realPlanKey);
+  if(isPlanLocked(planId) || isPlanLocked(realPlanKey)){
     showToast('This plan is temporary locked', 'error');
     return;
   }
 
-  currentPaymentPlan = planType;
+  currentPaymentPlan = realPlanKey;
   currentPaymentAmount = amount;
-  let planNames = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly'};
-  let validity = {daily: '24 Hours', weekly: '7 Days', monthly: '24 Hours'};
+
+  let pInfo = planData[realPlanKey] || planData.weekly;
+  let validityText = pInfo.days >= 7 ? (pInfo.days + ' Days') : (pInfo.hours + ' Hours');
 
   document.getElementById('paymentAmount').innerText = '₹' + amount;
-  document.getElementById('paymentPlan').innerText = planNames[planType] + ' Plan';
-  document.getElementById('paymentValidity').innerText = validity[planType] + ' Validity';
+  document.getElementById('paymentPlan').innerText = pInfo.name + ' Plan';
+  document.getElementById('paymentValidity').innerText = validityText + ' Validity';
 
-  // ✅ LOAD PLAN-WISE UPI FROM FIRESTORE (SYNCED WITH ADMIN)
-  currentSelectedPlan = planId;
-  const upiId = getUPIForPlan(planId);
+  currentSelectedPlan = realPlanKey;
+  const upiId = getUPIForPlan(realPlanKey) || getUPIForPlan(planId);
   document.getElementById('upiDisplay').innerText = upiId || 'Loading UPI...';
 
   showPage('payment', null);
@@ -3133,7 +3209,10 @@ function checkAndExpireSubscription(){
     planExpiry = 0;
     credits = 0;
     subscription = {};
+    enforceXPCap(); // free plan pe aate hi XP cap apply
     saveDataToFirestore();
+  } else {
+    enforceXPCap(); // active plan pe bhi cap enforce
   }
 }
 
@@ -3179,13 +3258,21 @@ async function submitVideo(){
   let cat = document.getElementById('category').value;
   if(cat === ''){ showToast('❌ Select a category', 'error'); return; }
 
-  let dailyLimit = plan==='free'? 3 : plan==='monthly' ? 999 : planData[plan].days===1?3:30;
+  // Get current active plan info
+  checkAndExpireSubscription();
+  let pInfo = planData[plan] || planData.free;
+  let dailyLimit = pInfo.uploadLimit || 3;
   let today = todayKey();
   let extraUnlockedToday = extraUploads[today] || 0;
   let effectiveLimit = dailyLimit + extraUnlockedToday;
 
-  if(myVideos.length >= effectiveLimit){
-    showToast('❌ Daily limit reached!', 'error');
+  // Count only today's videos for daily limit
+  let todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  let todayVideosCount = myVideos.filter(v => v.uploadedAt >= todayStart.getTime() && !v.removed).length;
+
+  if(todayVideosCount >= effectiveLimit){
+    showToast(`❌ Daily upload limit reached! (${effectiveLimit} videos)`, 'error');
     updateUploadLimit();
     return;
   }
@@ -3196,16 +3283,16 @@ async function submitVideo(){
   if(document.getElementById('title').value.trim() == ''){ showToast('❌ Enter a title', 'error'); return; }
   if(document.getElementById('coverImage').value.trim() == ''){ showToast('❌ Enter image URL', 'error'); return; }
 
-  let currentXP = planData[plan].xp || 10;
-  let currentMaxUsers = planData[plan].maxUsers || 10;
-  let durationMs = planVideoDurationMs[plan] || planVideoDurationMs.free;
+  let currentXP = pInfo.xp || 10;
+  let currentMaxUsers = pInfo.maxUsers || 10;
+  let durationMs = pInfo.durationMs || planData.free.durationMs;
 
   let newVid = {
     id: vid,
     title: document.getElementById('title').value,
     by: currentUser.displayName || "Creator",
     plan: plan,
-    isPro: plan!=='free',
+    isPro: plan !== 'free',
     category: cat,
     xp: currentXP,
     maxUsers: currentMaxUsers,
@@ -3232,7 +3319,7 @@ async function submitVideo(){
 
   await saveDataToFirestore();
 
-  showToast(`✅ Video submitted! Target: ${currentMaxUsers} views`);
+  showToast(`✅ Video submitted! Target: ${currentMaxUsers} views | +${currentXP} XP each`);
   document.getElementById('category').value='';
   document.getElementById('ytLink').value='';
   document.getElementById('title').value='';
@@ -3471,6 +3558,27 @@ function loadSocialTasks(){
   container.innerHTML = html;
 }
 
+// ============ XP LIMIT CHECK ============
+function canEarnXP(amount){
+  let pInfo = planData[plan] || planData.free;
+  let maxAllowed = pInfo.maxXP || 5000;
+  if(points + amount > maxAllowed){
+    showToast(`❌ XP Limit reached! Max ${maxAllowed.toLocaleString()} XP on your plan`, 'error');
+    return false;
+  }
+  return true;
+}
+
+function addXP(amount, reason = ''){
+  if(!canEarnXP(amount)) return false;
+  points += amount;
+  let today = todayKey();
+  dailyXP[today] = (dailyXP[today] || 0) + amount;
+  document.getElementById('points').innerText = points;
+  saveDataToFirestore();
+  return true;
+}
+
 function claimSocialTask(taskId){
   if(completedSocialTasks[taskId]){
     showToast('❌ Already claimed!', 'error');
@@ -3482,8 +3590,12 @@ function claimSocialTask(taskId){
 
   window.open(task.link, '_blank');
 
+  if(!canEarnXP(task.xp)) return;
+
   completedSocialTasks[taskId] = true;
   points += task.xp;
+  let today = todayKey();
+  dailyXP[today] = (dailyXP[today] || 0) + task.xp;
 
   saveDataToFirestore();
   updateProfile();
@@ -3493,18 +3605,14 @@ function claimSocialTask(taskId){
 function updateProfile(){
   checkAndExpireSubscription();
 
-  let planName = 'Free'; 
-  let badge = 'FREE'; 
-  let ai = '0/day'; 
-  let upload = '3/day'; 
-  let validity = 'No active plan'; 
-  let creator = 'BASIC CREATOR'; 
-  let badgeColor = '#2a2a3a';
-  let maxUsers = planData[plan].maxUsers + ' Users';
-
-  if(plan === 'daily'){planName = 'Daily Member'; badge = 'PRO'; ai = '5/day'; upload = '3/day'; validity = '24 Hours'; creator = 'PRO CREATOR'; badgeColor = '#FF2E63';}
-  if(plan === 'weekly'){planName = 'Weekly Member'; badge = 'PRO+'; ai = '20/day'; upload = '10/day'; validity = '7 Days'; creator = 'PRO CREATOR'; badgeColor = '#FF6B9D';}
-  if(plan === 'monthly'){planName = 'Monthly Member'; badge = 'VIP ✨'; ai = '30/day'; upload = 'UNLIMITED'; validity = '24 Hours'; creator = 'VIP CREATOR'; badgeColor = '#FFD700';}
+  let pInfo = planData[plan] || planData.free;
+  let planName = pInfo.name || 'Free';
+  let badge = pInfo.badge || 'FREE';
+  let upload = (pInfo.uploadLimit >= 100 ? 'High / Unlimited' : pInfo.uploadLimit + '/day');
+  let validity = plan === 'free' ? 'No active plan' : (pInfo.days >= 7 ? pInfo.days + ' Days' : pInfo.hours + ' Hours');
+  let creator = plan === 'free' ? 'BASIC CREATOR' : (plan.includes('premium') || plan === 'monthly' ? 'VIP CREATOR' : 'PRO CREATOR');
+  let badgeColor = plan === 'free' ? '#2a2a3a' : (badge.includes('VIP') || badge === 'GOLD' || badge === 'PREMIUM' ? '#FFD700' : '#FF2E63');
+  let maxUsers = (pInfo.maxUsers >= 999999 ? 'Unlimited' : pInfo.maxUsers + ' Users');
 
   let activePlanSection = document.getElementById('activePlanSection');
   let pendingPaymentSection = document.getElementById('pendingPaymentSection');
@@ -3521,7 +3629,7 @@ function updateProfile(){
     document.getElementById('activePlanName').innerText = planName;
     document.getElementById('activePlanStatus').innerText = '✅ Verified';
     document.getElementById('activePlanExpires').innerText = timeStr;
-    document.getElementById('activePlanAmount').innerText = '₹' + planData[plan].price;
+    document.getElementById('activePlanAmount').innerText = '₹' + (pInfo.price || 0);
 
     document.getElementById('subStatus').innerText = planName;
     document.getElementById('subPaymentStatus').innerText = '✅ Verified';
@@ -3532,8 +3640,9 @@ function updateProfile(){
     activePlanSection.style.display = 'none';
     pendingPaymentSection.style.display = 'block';
 
-    let planNameForPending = {daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly'}[subscription.plan] || subscription.plan;
-    document.getElementById('pendingPlanName').innerText = planNameForPending;
+    let pendingKey = subscription.plan || 'daily_basic';
+    let pendingInfo = planData[pendingKey] || {name: subscription.plan};
+    document.getElementById('pendingPlanName').innerText = pendingInfo.name || subscription.plan;
     document.getElementById('pendingPlanAmount').innerText = '₹' + subscription.amount;
     document.getElementById('pendingRefNumber').innerText = subscription.referenceNumber;
     document.getElementById('pendingSubmittedAt').innerText = new Date(subscription.submittedAt).toLocaleString('en-IN');
@@ -3557,8 +3666,8 @@ function updateProfile(){
   document.getElementById('profileBadge').innerText = badge;
   document.getElementById('badgeTop').innerText = badge;
   document.getElementById('badgeTop').style.background = badgeColor;
-  document.getElementById('badgeTop').style.color = badge === 'VIP ✨' ? '#000' : '#FFF';
-  document.getElementById('profileAI').innerText = ai;
+  document.getElementById('badgeTop').style.color = (badge.includes('VIP') || badge === 'GOLD') ? '#000' : '#FFF';
+  document.getElementById('profileAI').innerText = '—';
   document.getElementById('profileUpload').innerText = upload;
   document.getElementById('profileUserLimit').innerText = maxUsers;
   document.getElementById('profileExpiry').innerText = validity;
@@ -3576,13 +3685,23 @@ function updateProfile(){
 }
 
 function updateUploadLimit(){
-  let limit = plan==='free'?3: plan==='monthly'?999:planData[plan].days===1?3:30;
+  checkAndExpireSubscription();
+  let pInfo = planData[plan] || planData.free;
+  let limit = pInfo.uploadLimit || 3;
   let today = todayKey();
   let extraUnlockedToday = extraUploads[today] || 0;
   let effectiveLimit = limit + extraUnlockedToday;
-  let left = effectiveLimit - myVideos.length;
 
-  document.getElementById('uploadLimit').innerText = `${plan==='free'?'FREE':plan==='monthly'?'MONTHLY (UNLIMITED)':planData[plan].name.toUpperCase()}: ${left} videos left${extraUnlockedToday>0 ? ' (incl. '+extraUnlockedToday+' extra)' : ''}`;
+  // Count only today's videos
+  let todayStart = new Date();
+  todayStart.setHours(0,0,0,0);
+  let todayVideosCount = myVideos.filter(v => v.uploadedAt >= todayStart.getTime() && !v.removed).length;
+  let left = Math.max(0, effectiveLimit - todayVideosCount);
+
+  let planLabel = pInfo.name.toUpperCase();
+  if(limit >= 100) planLabel += ' (HIGH LIMIT)';
+
+  document.getElementById('uploadLimit').innerText = `${planLabel}: ${left} videos left today${extraUnlockedToday > 0 ? ' (incl. ' + extraUnlockedToday + ' extra)' : ''}`;
 
   let extraBox = document.getElementById('extraUploadBox');
   if(left <= 0 && plan === 'free'){
