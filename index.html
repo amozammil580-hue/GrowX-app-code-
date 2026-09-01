@@ -237,21 +237,72 @@
     transform:translateY(-2px);box-shadow:0 0 30px rgba(0,255,136,0.5);
   }
 
-  .header{background:rgba(18,18,26,0.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,255,136,0.2);padding:18px;text-align:center;font-size:22px;font-weight:700;font-family:'Orbitron';color:var(--accent);text-shadow:0 0 10px var(--accent);position:fixed;top:0;left:0;right:0;z-index:20;display:flex;justify-content:space-between;align-items:center}
-
-  .header-left{
-    flex:1;
-    text-align:left;
-    font-size:20px;
-    font-weight:800;
-    user-select:none;
+  .header{
+    background:rgba(10,10,15,0.95);
+    backdrop-filter:blur(16px);
+    border-bottom:1px solid rgba(0,255,136,0.15);
+    padding:0 14px;
+    height:64px;
+    position:fixed;top:0;left:0;right:0;z-index:20;
+    display:flex;align-items:center;justify-content:space-between;
   }
 
-  .header-right{display:flex;gap:12px;align-items:center}
+  .header-left{
+    display:flex;align-items:center;gap:7px;
+    user-select:none;
+  }
+  .logo-bolt{font-size:22px;color:#FFD700;filter:drop-shadow(0 0 6px rgba(255,215,0,0.6))}
+  .logo-text{
+    font-family:'Orbitron',sans-serif;font-size:19px;font-weight:700;
+    color:var(--accent);text-shadow:0 0 12px rgba(0,255,136,0.5);letter-spacing:0.5px;
+  }
 
-  .notification-btn{background:transparent;border:none;color:var(--accent);font-size:20px;cursor:pointer;transition:0.3s;position:relative}
+  .header-center{display:flex;align-items:center;gap:8px}
+
+  .wallet-badge{
+    display:flex;align-items:center;gap:7px;
+    background:rgba(0,0,0,0.5);border:1.5px solid rgba(0,255,136,0.4);
+    border-radius:50px;padding:5px 12px 5px 5px;min-width:105px;
+  }
+  .wallet-badge.xtoken{border-color:rgba(0,217,255,0.55)}
+
+  .x-icon{
+    width:30px;height:30px;border-radius:50%;background:#03060c;
+    border:2.3px solid transparent;
+    background-image:linear-gradient(#03060c,#03060c),linear-gradient(145deg,#00FF88 0%,#00E5C0 40%,#00D9FF 100%);
+    background-origin:border-box;background-clip:padding-box,border-box;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    box-shadow:0 0 14px rgba(0,217,255,0.4),0 0 6px rgba(0,255,136,0.3);
+  }
+  .x-icon svg{width:16px;height:16px;display:block}
+
+  .xp-icon{
+    width:30px;height:30px;border-radius:50%;background:#00140c;
+    border:2px solid #00FF88;display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;box-shadow:0 0 10px rgba(0,255,136,0.4);
+    font-family:'Orbitron',sans-serif;font-size:11px;font-weight:800;color:#00FF88;
+  }
+
+  .wallet-info{display:flex;flex-direction:column;line-height:1.15}
+  .wallet-label{font-size:9px;font-weight:700;letter-spacing:0.7px;text-transform:uppercase}
+  .wallet-badge.xtoken .wallet-label{color:#00D9FF}
+  .wallet-badge.xp .wallet-label{color:#00FF88}
+  .wallet-value{font-family:'Orbitron',sans-serif;font-size:14px;font-weight:700;color:#fff}
+
+  .header-right{display:flex;align-items:center}
+
+  .notification-btn{background:transparent;border:none;color:var(--accent);font-size:22px;cursor:pointer;transition:0.3s;position:relative;padding:6px}
   .notification-btn:hover{transform:scale(1.1)}
-  .notification-badge{position:absolute;top:-5px;right:-8px;background:var(--danger);color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .notification-badge{position:absolute;top:2px;right:2px;background:var(--danger);color:#fff;border-radius:50%;width:16px;height:16px;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+  @media(max-width:400px){
+    .logo-text{font-size:16px}
+    .wallet-badge{min-width:95px;padding:4px 10px 4px 4px;gap:5px}
+    .wallet-value{font-size:13px}
+    .x-icon,.xp-icon{width:26px;height:26px}
+    .x-icon svg{width:13px;height:13px}
+    .xp-icon{font-size:10px}
+  }
 
   .nav{display:flex;justify-content:space-around;background:rgba(18,18,26,0.7);backdrop-filter:blur(12px);border-bottom:1px solid rgba(0,217,255,0.1);padding:8px;position:fixed;left:0;right:0;z-index:19}
   .nav button{background:transparent;border:none;color:var(--muted);padding:10px 5px;font-size:13px;font-weight:500;cursor:pointer;width:25%;border-radius:8px;transition:0.3s}
@@ -794,6 +845,76 @@
     transform:scale(0.98);
   }
 
+
+  /* ========== X TOKEN MODAL ========== */
+  .xtoken-modal{
+    position:fixed;top:0;left:0;right:0;bottom:0;
+    background:rgba(0,0,0,0.75);z-index:9990;
+    display:none;align-items:flex-start;justify-content:center;
+    overflow-y:auto;padding:20px 12px 40px;backdrop-filter:blur(6px);
+  }
+  .xtoken-modal.show{display:flex}
+  .xtoken-modal-inner{
+    width:100%;max-width:480px;margin:auto;
+  }
+  .xtoken-card{
+    background:rgba(18,18,26,0.95);border:1.5px solid rgba(0,255,136,0.25);
+    border-radius:18px;padding:24px 20px;margin-bottom:16px;
+    box-shadow:0 0 40px rgba(0,255,136,0.12);
+  }
+  .xtoken-close{
+    float:right;background:rgba(255,46,99,0.2);border:none;color:var(--danger);
+    width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .xtoken-title{
+    text-align:center;font-family:'Orbitron';font-size:24px;font-weight:800;
+    color:var(--accent);margin:8px 0 4px;text-shadow:0 0 15px rgba(0,255,136,0.35);
+  }
+  .xtoken-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:20px}
+  .xtoken-label{
+    display:block;font-size:12px;color:var(--accent);margin-bottom:8px;
+    font-weight:700;font-family:'Orbitron';letter-spacing:0.5px;text-transform:uppercase;
+  }
+  .xtoken-input{
+    width:100%;height:52px;border:1.5px solid rgba(0,255,136,0.2);border-radius:12px;
+    background:rgba(0,0,0,0.4);color:var(--text);padding:0 16px;font-size:17px;font-weight:700;
+  }
+  .xtoken-input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 15px rgba(0,255,136,0.15)}
+  .xtoken-packs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+  .xtoken-pack{
+    cursor:pointer;padding:14px 8px;text-align:center;border-radius:12px;
+    background:rgba(0,0,0,0.3);border:1.5px solid rgba(0,255,136,0.15);transition:0.25s;
+  }
+  .xtoken-pack:hover,.xtoken-pack.active{
+    border-color:var(--accent);background:rgba(0,255,136,0.1);
+    box-shadow:0 0 15px rgba(0,255,136,0.2);
+  }
+  .xtoken-pack strong{display:block;font-size:15px;color:var(--text)}
+  .xtoken-pack span{display:block;color:var(--accent);font-size:14px;font-weight:700;margin-top:4px}
+  .xtoken-breakdown{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:20px}
+  .xtoken-box{
+    padding:12px 6px;border-radius:10px;background:rgba(0,255,136,0.05);
+    border:1.5px solid rgba(0,255,136,0.15);text-align:center;
+  }
+  .xtoken-box-title{color:var(--muted);font-size:10px;margin-bottom:6px;font-weight:600;text-transform:uppercase}
+  .xtoken-box-val{font-size:18px;font-weight:800;font-family:'Orbitron';color:var(--accent)}
+  .xtoken-box-val.bonus{color:var(--warning)}
+  .xtoken-upi-box{
+    background:rgba(0,217,255,0.08);border-left:4px solid var(--accent2);
+    padding:12px;border-radius:8px;margin-bottom:16px;
+  }
+  .xtoken-upi-label{color:var(--muted);font-size:11px;margin-bottom:6px;display:block}
+  .xtoken-upi-id{
+    background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;color:var(--accent);
+    font-weight:700;font-size:14px;word-break:break-all;font-family:monospace;
+  }
+  .xtoken-steps{
+    background:rgba(0,255,136,0.05);border-left:3px solid var(--accent);
+    padding:12px;border-radius:8px;font-size:12px;line-height:1.7;color:var(--text);
+  }
+  .xtoken-steps b{color:var(--accent)}
+
 </style>
 </head>
 <body>
@@ -822,6 +943,69 @@
   </div>
   <button class="coming-soon-btn" onclick="closeComingSoon()">Got it!</button>
 </div>
+
+<!-- ========== X TOKEN CALCULATOR MODAL ========== -->
+<div class="xtoken-modal" id="xtokenModal">
+  <div class="xtoken-modal-inner">
+    <div class="xtoken-card">
+      <button class="xtoken-close" onclick="closeXTokenModal()">✕</button>
+      <div style="clear:both"></div>
+      <div class="xtoken-title">X Token Calculator</div>
+      <div class="xtoken-sub">Select a pack or enter your amount</div>
+
+      <label class="xtoken-label">Enter Amount (₹)</label>
+      <input id="xtokenAmount" class="xtoken-input" type="number" min="0" placeholder="Example: 50" oninput="xtokenManualInput()">
+
+      <div class="xtoken-packs">
+        <div class="xtoken-pack" onclick="xtokenSelectPack(5,1,0)"><strong>₹5</strong><span>1 X</span></div>
+        <div class="xtoken-pack" onclick="xtokenSelectPack(10,2,1)"><strong>₹10</strong><span>3 X</span></div>
+        <div class="xtoken-pack" onclick="xtokenSelectPack(20,4,3)"><strong>₹20</strong><span>7 X</span></div>
+        <div class="xtoken-pack" onclick="xtokenSelectPack(50,10,10)"><strong>₹50</strong><span>20 X</span></div>
+        <div class="xtoken-pack" onclick="xtokenSelectPack(100,20,25)"><strong>₹100</strong><span>45 X</span></div>
+        <div class="xtoken-pack" onclick="xtokenSelectPack(200,40,60)"><strong>₹200</strong><span>100 X</span></div>
+      </div>
+
+      <div class="xtoken-breakdown">
+        <div class="xtoken-box">
+          <div class="xtoken-box-title">Base X</div>
+          <div class="xtoken-box-val" id="xtokenBase">0</div>
+        </div>
+        <div class="xtoken-box">
+          <div class="xtoken-box-title">Bonus</div>
+          <div class="xtoken-box-val bonus" id="xtokenBonus">+0</div>
+        </div>
+        <div class="xtoken-box">
+          <div class="xtoken-box-title">Total X</div>
+          <div class="xtoken-box-val" id="xtokenTotal">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="xtoken-card">
+      <div class="xtoken-upi-box">
+        <label class="xtoken-upi-label">Send payment to this UPI ID:</label>
+        <div class="xtoken-upi-id" id="xtokenUpiDisplay">Loading...</div>
+      </div>
+      <button class="secondary" style="margin-bottom:14px" onclick="copyXTokenUPI()">📋 Copy UPI ID</button>
+
+      <label class="xtoken-label">Reference Number (UTR)</label>
+      <input type="text" id="xtokenRefInput" class="xtoken-input" placeholder="e.g., UTR1234567890" style="height:48px;font-size:14px;margin-bottom:14px">
+
+      <button class="primary" onclick="submitXTokenPayment()">✅ Submit Payment</button>
+    </div>
+
+    <div class="xtoken-card">
+      <div class="xtoken-steps">
+        <div><b>1:</b> Select pack or enter amount</div>
+        <div><b>2:</b> Check Base + Bonus + Total tokens</div>
+        <div><b>3:</b> Send money to the UPI ID above</div>
+        <div><b>4:</b> Paste transaction ID (UTR)</div>
+        <div><b>5:</b> Submit — X Tokens added after verification</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <!-- NOTIFICATIONS MODAL -->
 <div class="notifications-modal" id="notificationsModal">
@@ -935,13 +1119,55 @@
 </div>
 
 <div class="header" style="display:none" id="headerBar">
-  <div class="header-left">⚡ GrowX</div>
+  <!-- Left: Logo -->
+  <div class="header-left">
+    <span class="logo-bolt">⚡</span>
+    <span class="logo-text">GrowX</span>
+  </div>
+
+  <!-- Center: XTOKEN + XP -->
+  <div class="header-center">
+    <!-- XTOKEN (show only for now) -->
+    <div class="wallet-badge xtoken" onclick="openXTokenModal()" style="cursor:pointer">
+      <div class="x-icon">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="xWhite" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#FFFFFF"/>
+              <stop offset="100%" stop-color="#E8F8FF"/>
+            </linearGradient>
+            <linearGradient id="xCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#00FF88"/>
+              <stop offset="50%" stop-color="#00E5C8"/>
+              <stop offset="100%" stop-color="#00D9FF"/>
+            </linearGradient>
+          </defs>
+          <path d="M5 5 L19 19" stroke="url(#xCyan)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M19 5 L5 19" stroke="url(#xWhite)" stroke-width="5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="wallet-info">
+        <span class="wallet-label">XTOKEN</span>
+        <span class="wallet-value" id="xtokenValue">0</span>
+      </div>
+    </div>
+
+    <!-- XP (working) -->
+    <div class="wallet-badge xp">
+      <div class="xp-icon">XP</div>
+      <div class="wallet-info">
+        <span class="wallet-label">XP</span>
+        <span class="wallet-value" id="points">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Bell -->
   <div class="header-right">
     <button class="notification-btn" onclick="openNotificationsModal()">
       🔔
       <span class="notification-badge" id="notificationBadge" style="display:none">0</span>
     </button>
-    <span class="points">XP: <span id="points">0</span></span>
   </div>
 </div>
 
@@ -1832,23 +2058,36 @@ function resetData(){
 
 // ============ EDIT NAME MODAL ============
 function openEditNameModal(){
-  let displayName = currentUser?.displayName || 'User';
-  let defaultUserNum = getDefaultUserNumber();
-  
-  document.getElementById('editNameInput').value = displayName !== `User ${defaultUserNum}` ? displayName : '';
-  
-  let costLabel = document.getElementById('editNameCostLabel');
-  let costDisplay = document.getElementById('editNameCostDisplay');
-  
-  if(nameChangeCount === 0){
-    costLabel.innerText = '✨ First time: 10 XP (Default → Your Name)';
-    costDisplay.innerText = '⚡ Cost: 10 XP';
-  } else {
-    costLabel.innerText = `🔄 Name change #${nameChangeCount + 1}: 10,000 XP`;
-    costDisplay.innerText = '⚡ Cost: 10,000 XP';
+  try {
+    let displayName = (currentUser && currentUser.displayName) ? currentUser.displayName : 'User';
+    let defaultUserNum = getDefaultUserNumber();
+    
+    let input = document.getElementById('editNameInput');
+    if(input){
+      input.value = (displayName !== ('User ' + defaultUserNum)) ? displayName : '';
+    }
+    
+    let costLabel = document.getElementById('editNameCostLabel');
+    let costDisplay = document.getElementById('editNameCostDisplay');
+    
+    if(nameChangeCount === 0){
+      if(costLabel) costLabel.innerText = '✨ First time: 10 XP (Default → Your Name)';
+      if(costDisplay) costDisplay.innerText = '⚡ Cost: 10 XP';
+    } else {
+      if(costLabel) costLabel.innerText = '🔄 Name change #' + (nameChangeCount + 1) + ': 10,000 XP';
+      if(costDisplay) costDisplay.innerText = '⚡ Cost: 10,000 XP';
+    }
+    
+    let modal = document.getElementById('editNameModal');
+    if(modal){
+      modal.classList.add('show');
+    } else {
+      showToast('❌ Modal not found', 'error');
+    }
+  } catch(err) {
+    console.log('openEditNameModal error:', err);
+    showToast('❌ Could not open name editor', 'error');
   }
-  
-  document.getElementById('editNameModal').classList.add('show');
 }
 
 function closeEditNameModal(){
@@ -1863,7 +2102,12 @@ function confirmEditName(){
     return;
   }
   
-  // First time = 10 XP, har baar baad mein = 10,000 XP
+  if(newName.length < 2){
+    showToast('❌ Name must be at least 2 characters', 'error');
+    return;
+  }
+  
+  // First time = 10 XP, uske baad har baar = 10,000 XP
   let requiredXP = nameChangeCount === 0 ? 10 : 10000;
   
   if(points < requiredXP){
@@ -1871,15 +2115,36 @@ function confirmEditName(){
     return;
   }
   
+  // Deduct XP first
   points -= requiredXP;
   nameChangeCount++;
   
-  auth.currentUser.updateProfile({
-    displayName: newName
-  }).then(() => {
+  // Update Firebase Auth profile
+  let updatePromise = Promise.resolve();
+  if(auth && auth.currentUser){
+    updatePromise = auth.currentUser.updateProfile({ displayName: newName });
+  }
+  
+  updatePromise.then(() => {
+    // Also update Firestore displayName
+    if(firebaseReady && currentUser && db){
+      db.collection('users').doc(currentUser.uid).update({
+        displayName: newName,
+        nameChangeCount: nameChangeCount,
+        xp: points,
+        points: points
+      }).catch(()=>{});
+    }
     saveDataToFirestore();
     closeEditNameModal();
+    
+    // Update UI immediately
+    document.getElementById('name').innerText = newName;
+    if(document.getElementById('avatar')){
+      document.getElementById('avatar').innerText = newName.substring(0,2).toUpperCase();
+    }
     updateProfile();
+    
     if(nameChangeCount === 1){
       showToast(`✅ Name changed to "${newName}"! (10 XP spent)`);
     } else {
@@ -1887,7 +2152,10 @@ function confirmEditName(){
     }
     loadFeed();
   }).catch(err => {
-    showToast('❌ Failed to update name', 'error');
+    // Rollback on failure
+    points += requiredXP;
+    nameChangeCount--;
+    showToast('❌ Failed to update name: ' + (err.message || 'try again'), 'error');
   });
 }
 
@@ -2187,28 +2455,50 @@ function displayRulesInProfile() {
 
 function copyRuleText(boxId) {
   const box = document.getElementById(boxId);
-  if (!box) return;
+  if (!box) {
+    showToast('❌ Content not found', 'error');
+    return;
+  }
 
-  const textElement = box.querySelector('.rule-box-content');
-  const text = textElement ? textElement.innerText : '';
+  // Prefer inner .rule-box-content, otherwise whole box text
+  let textElement = box.querySelector('.rule-box-content');
+  let text = textElement ? textElement.innerText.trim() : box.innerText.trim();
 
-  if (!text || text.includes('not set by admin yet')) {
+  if (!text || text.includes('not set by admin yet') || text.includes('Loading ')) {
     showToast('❌ No content to copy', 'error');
     return;
   }
 
-  navigator.clipboard.writeText(text).then(() => {
-    showToast('✅ Text copied to clipboard!', 'success');
-  }).catch(() => {
-    // Fallback for older browsers
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    showToast('✅ Text copied!', 'success');
-  });
+  // Modern clipboard API + strong fallback
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('✅ Text copied to clipboard!', 'success');
+    }).catch(() => {
+      fallbackCopyText(text);
+    });
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text) {
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
+  textarea.setAttribute('readonly', '');
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, text.length);
+  try {
+    const ok = document.execCommand('copy');
+    showToast(ok ? '✅ Text copied!' : '❌ Copy failed', ok ? 'success' : 'error');
+  } catch (err) {
+    showToast('❌ Could not copy. Try manually', 'error');
+  }
+  document.body.removeChild(textarea);
 }
 
 window.addEventListener('load', startLoadingScreen);
@@ -2325,7 +2615,16 @@ const socialTasks = [
 // ============ HELPER FUNCTIONS ============
 function getDefaultUserNumber(){
   if(!currentUser) return 0;
-  return (currentUser.metadata.creationTime.getTime() % 1000) + 1;
+  try {
+    // creationTime is a string in Firebase Auth
+    let t = currentUser.metadata && currentUser.metadata.creationTime;
+    if(!t) return 1;
+    let ts = new Date(t).getTime();
+    if(isNaN(ts)) return 1;
+    return (ts % 1000) + 1;
+  } catch(e) {
+    return 1;
+  }
 }
 
 // ============ FIRESTORE OPERATIONS ============
@@ -3868,6 +4167,122 @@ function extractVideoData() {
 
   document.getElementById('transcriptOutput').innerHTML = html;
 }
+
+
+// ============ X TOKEN SYSTEM ============
+let xtokenBalance = 0;
+let currentXTokenAmount = 0;
+let currentXTokenTotal = 0;
+
+function openXTokenModal(){
+  // Load UPI - same as premium/monthly plan UPI
+  let upi = getUPIForPlan('monthly') || getUPIForPlan('daily_premium') || getUPIForPlan('weekly') || getUPIForPlan('daily_gold') || '';
+  // Also try any available UPI from planUPIIds
+  if(!upi && planUPIIds){
+    let keys = Object.keys(planUPIIds);
+    for(let k of keys){
+      if(planUPIIds[k]){ upi = planUPIIds[k]; break; }
+    }
+  }
+  document.getElementById('xtokenUpiDisplay').innerText = upi || 'UPI not set by admin';
+  document.getElementById('xtokenModal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeXTokenModal(){
+  document.getElementById('xtokenModal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function xtokenSelectPack(amount, base, bonus){
+  document.getElementById('xtokenAmount').value = amount;
+  currentXTokenAmount = amount;
+  currentXTokenTotal = base + bonus;
+  document.getElementById('xtokenBase').innerText = base;
+  document.getElementById('xtokenBonus').innerText = '+' + bonus;
+  document.getElementById('xtokenTotal').innerText = currentXTokenTotal;
+
+  document.querySelectorAll('.xtoken-pack').forEach(p => p.classList.remove('active'));
+  if(event && event.currentTarget) event.currentTarget.classList.add('active');
+}
+
+function xtokenManualInput(){
+  let amount = Number(document.getElementById('xtokenAmount').value) || 0;
+  currentXTokenAmount = amount;
+  let base = 0, total = 0;
+
+  if(amount > 0){
+    base = Math.floor(amount / 5);
+    let remaining = amount;
+    let p200 = Math.floor(remaining / 200); total += p200 * 100; remaining %= 200;
+    let p100 = Math.floor(remaining / 100); total += p100 * 45; remaining %= 100;
+    let p50  = Math.floor(remaining / 50);  total += p50 * 20;  remaining %= 50;
+    let p20  = Math.floor(remaining / 20);  total += p20 * 7;   remaining %= 20;
+    let p10  = Math.floor(remaining / 10);  total += p10 * 3;   remaining %= 10;
+    let p5   = Math.floor(remaining / 5);   total += p5 * 1;
+  }
+  let bonus = Math.max(0, total - base);
+  currentXTokenTotal = total;
+  document.getElementById('xtokenBase').innerText = base;
+  document.getElementById('xtokenBonus').innerText = '+' + bonus;
+  document.getElementById('xtokenTotal').innerText = total;
+  document.querySelectorAll('.xtoken-pack').forEach(p => p.classList.remove('active'));
+}
+
+function copyXTokenUPI(){
+  let upi = document.getElementById('xtokenUpiDisplay').innerText;
+  if(!upi || upi.includes('not set') || upi === 'Loading...'){
+    showToast('❌ UPI not available', 'error');
+    return;
+  }
+  simpleCopy(upi, '✅ UPI ID copied!');
+}
+
+function submitXTokenPayment(){
+  let amount = Number(document.getElementById('xtokenAmount').value) || 0;
+  let refNo = document.getElementById('xtokenRefInput').value.trim();
+  let total = currentXTokenTotal || Number(document.getElementById('xtokenTotal').innerText) || 0;
+
+  if(amount <= 0){
+    showToast('❌ Please enter a valid amount', 'error');
+    return;
+  }
+  if(!refNo){
+    showToast('❌ Please enter Reference Number (UTR)', 'error');
+    return;
+  }
+
+  // Save recharge request (similar to plan payment)
+  let rechargeData = {
+    type: 'xtoken',
+    amount: amount,
+    tokens: total,
+    referenceNumber: refNo,
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+    userId: currentUser ? currentUser.uid : '',
+    userName: currentUser ? (currentUser.displayName || 'User') : 'User',
+    userEmail: currentUser ? currentUser.email : ''
+  };
+
+  if(firebaseReady && db && currentUser){
+    db.collection('xtoken_recharges').add(rechargeData).then(() => {
+      showToast('✅ X Token request submitted! Verification soon');
+      closeXTokenModal();
+      document.getElementById('xtokenAmount').value = '';
+      document.getElementById('xtokenRefInput').value = '';
+      xtokenManualInput();
+    }).catch(err => {
+      console.log('XToken submit error:', err);
+      showToast('⚠️ Submitted but sync pending', 'error');
+      closeXTokenModal();
+    });
+  } else {
+    showToast('✅ Request recorded (offline mode)');
+    closeXTokenModal();
+  }
+}
+
 
 </script>
 
